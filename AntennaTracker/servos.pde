@@ -163,7 +163,7 @@ static void update_yaw_position_servo(float yaw)
 {
     int32_t ahrs_yaw_cd = wrap_180_cd(ahrs.yaw_sensor);
     int32_t yaw_cd   = wrap_180_cd(yaw*100);
-    int16_t yaw_limit_cd = g.yaw_range*100;
+    int32_t yaw_limit_cd = g.yaw_range*100/2;
     const int16_t margin = 500; // 5 degrees slop
 
     // Antenna as Ballerina. Use with antenna that do not have continuously rotating servos, ie at some point in rotation
