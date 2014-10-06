@@ -195,6 +195,7 @@ static void set_mode(enum ControlMode mode)
     case AUTO:
     case MANUAL:
     case SCAN:
+    case GUIDED:
         arm_servos();
         break;
 
@@ -214,6 +215,7 @@ static bool mavlink_set_mode(uint8_t mode)
     case AUTO:
     case MANUAL:
     case SCAN:
+    case GUIDED:
     case STOP:
         set_mode((enum ControlMode)mode);
         return true;

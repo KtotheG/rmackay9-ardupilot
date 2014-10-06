@@ -95,6 +95,7 @@ static void update_tracking(void)
         update_scan();
         break;
 
+    case GUIDED:
     case STOP:
     case INITIALISING:
         break;

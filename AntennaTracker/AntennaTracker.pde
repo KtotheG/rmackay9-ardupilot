@@ -208,6 +208,9 @@ static struct   Location current_loc;
 // There are multiple states defined such as MANUAL, FBW-A, AUTO
 static enum ControlMode control_mode  = INITIALISING;
 
+// guided mode sub mode
+static enum GuidedMode guided_mode = GUIDED_SERVO_DIRECT;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Vehicle state
 ////////////////////////////////////////////////////////////////////////////////

@@ -57,8 +57,14 @@ enum ControlMode {
     MANUAL=0,
     STOP=1,
     SCAN=2,
+    GUIDED=3,
     AUTO=10,
     INITIALISING=16
+};
+
+enum GuidedMode {
+    GUIDED_SERVO_DIRECT=0,
+    GUIDED_ROI=1
 };
 
 enum ServoType {
