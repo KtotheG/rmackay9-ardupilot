@@ -65,6 +65,15 @@
  # define CH_PITCH      CH_2    // RC input/output for pitch on channel 2
 #endif
 
+//////////////////////////////////////////////////////////////////////////////
+// yaw and pitch axis angle range defaults
+//
+#ifndef YAW_RANGE_DEFAULT
+ # define YAW_RANGE_DEFAULT 360
+#endif
+#ifndef PITCH_RANGE_DEFAULT
+ # define PITCH_RANGE_DEFAULT 180
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Tracking definitions
