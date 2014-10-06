@@ -66,5 +66,15 @@ enum ServoType {
     SERVO_TYPE_ONOFF=1
 };
 
+//
+// yaw and pitch axis ranges
+//
+#ifndef YAW_RANGE_DEFAULT
+ # define YAW_RANGE_DEFAULT 360
+#endif
+#ifndef PITCH_RANGE_DEFAULT
+ # define PITCH_RANGE_DEFAULT 180
+#endif
+
 #endif // _DEFINES_H
 
