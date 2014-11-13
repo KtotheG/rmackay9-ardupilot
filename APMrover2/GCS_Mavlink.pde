@@ -815,6 +815,15 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                 break;
 #endif
 
+            case MAV_CMD_DO_DIGICAM_CONFIGURE:
+                break;
+
+            case MAV_CMD_DO_DIGICAM_CONTROL:
+#if CAMERA == ENABLED
+                camera.control_msg(msg);
+#endif
+                break;
+
             case MAV_CMD_MISSION_START:
                 set_mode(AUTO);
                 result = MAV_RESULT_ACCEPTED;
@@ -1075,20 +1084,6 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             break;
 		}
 #endif // HIL_MODE
-
-#if CAMERA == ENABLED
-    case MAVLINK_MSG_ID_DIGICAM_CONFIGURE:
-    {
-        camera.configure_msg(msg);
-        break;
-    }
-
-    case MAVLINK_MSG_ID_DIGICAM_CONTROL:
-    {
-        camera.control_msg(msg);
-        break;
-    }
-#endif // CAMERA == ENABLED
 
 #if MOUNT == ENABLED
     case MAVLINK_MSG_ID_MOUNT_CONFIGURE:
