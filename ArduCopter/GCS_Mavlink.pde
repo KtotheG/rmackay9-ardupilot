@@ -1103,6 +1103,15 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             result = MAV_RESULT_ACCEPTED;
             break;
 
+        case MAV_CMD_DO_DIGICAM_CONFIGURE:      // MAV ID: 202
+            break;
+
+        case MAV_CMD_DO_DIGICAM_CONTROL:
+#if CAMERA == ENABLED
+            do_take_picture();
+#endif
+            break;
+
         case MAV_CMD_MISSION_START:
             if (set_mode(AUTO)) {
                 result = MAV_RESULT_ACCEPTED;
@@ -1417,15 +1426,6 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         handle_serial_control(msg, gps);
         break;
 #endif
-
-#if CAMERA == ENABLED
-    case MAVLINK_MSG_ID_DIGICAM_CONFIGURE:      // MAV ID: 202
-        break;
-
-    case MAVLINK_MSG_ID_DIGICAM_CONTROL:
-        do_take_picture();
-        break;
-#endif // CAMERA == ENABLED
 
 #if MOUNT == ENABLED
     case MAVLINK_MSG_ID_MOUNT_CONFIGURE:        // MAV ID: 204
