@@ -69,6 +69,41 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @User: Standard
     AP_GROUPINFO("SPIN_ARMED", 5, AP_Motors, _spin_when_armed, AP_MOTORS_SPIN_WHEN_ARMED),
 
+    // @Param: THR_LOW_CMP
+    // @DisplayName: bla
+    // @Description: bla
+    // @Values: 0.5:Default,1:Hover
+    // @User: Standard
+    AP_GROUPINFO("THR_LOW_CMP", 6, AP_Motors, _throttle_low_comp, AP_MOTORS_THR_LOW_CMP),
+
+    // @Param: THST_EXPO
+    // @DisplayName: bla
+    // @Description: bla
+    // @Values: 0:Linear,1:Second Order
+    // @User: Standard
+    AP_GROUPINFO("THST_EXPO", 7, AP_Motors, _thrust_expo, AP_MOTORS_THST_EXPO),
+
+    // @Param: THST_MAX
+    // @DisplayName: bla
+    // @Description: Point at which the thrust saturates
+    // @Values: 0.9: Low, 1.0: High
+    // @User: Standard
+    AP_GROUPINFO("THST_MAX", 8, AP_Motors, _thrust_curve_max, AP_MOTORS_THST_MAX),
+
+    // @Param: THST_MAX
+    // @DisplayName: bla
+    // @Description: Point at which the thrust saturates
+    // @Values: 0.9: Low, 1.0: High
+    // @User: Standard
+    AP_GROUPINFO("THST_BAT_MX", 9, AP_Motors, _batt_voltage_max, AP_MOTORS_BAT_MX),
+
+    // @Param: THST_MAX
+    // @DisplayName: bla
+    // @Description: Point at which the thrust saturates
+    // @Values: 0.9: Low, 1.0: High
+    // @User: Standard
+    AP_GROUPINFO("THST_BAT_MN", 10, AP_Motors, _batt_voltage_min, AP_MOTORS_BAT_MN),
+
     AP_GROUPEND
 };
 
@@ -130,6 +165,19 @@ void AP_Motors::throttle_pass_through(int16_t pwm)
                 hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[i]), pwm);
             }
         }
+    }
+}
+
+// set_voltage - set voltage to be used for output scaling
+void AP_Motors::set_voltage(float volts)
+{
+    if(_batt_voltage_max > 0 && _batt_voltage_min < _batt_voltage_max) {
+        _batt_voltage = min(_batt_voltage_max, max(_batt_voltage_min, volts));
+        _batt_rem = _batt_voltage/_batt_voltage_max;         // ratio of current battery voltage to maximum battery voltage
+        _lift_max = _batt_rem*(1-_thrust_expo) + _thrust_expo*_batt_rem*_batt_rem;
+    } else {
+        _batt_rem = 1;
+        _lift_max = 1;
     }
 }
 
