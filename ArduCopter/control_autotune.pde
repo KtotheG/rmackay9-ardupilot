@@ -46,9 +46,9 @@
 #define AUTOTUNE_LEVEL_ANGLE_CD             300    // angle which qualifies as level
 #define AUTOTUNE_REQUIRED_LEVEL_TIME_MS     250    // time we require the copter to be level
 #define AUTOTUNE_AGGRESSIVENESS            0.1f    // tuning for 10% overshoot
-#define AUTOTUNE_RD_STEP                0.0005f    // minimum increment when increasing/decreasing Rate D term
-#define AUTOTUNE_RP_STEP                 0.005f    // minimum increment when increasing/decreasing Rate P term
-#define AUTOTUNE_SP_STEP                   0.5f    // minimum increment when increasing/decreasing Stab P term
+#define AUTOTUNE_RD_STEP                  0.05f    // minimum increment when increasing/decreasing Rate D term
+#define AUTOTUNE_RP_STEP                  0.05f    // minimum increment when increasing/decreasing Rate P term
+#define AUTOTUNE_SP_STEP                  0.05f    // minimum increment when increasing/decreasing Stab P term
 #define AUTOTUNE_SP_BACKOFF               0.75f    // Stab P gains are reduced to 75% of their maximum value discovered during tuning
 #define AUTOTUNE_PI_RATIO_FOR_TESTING      0.1f    // I is set 10x smaller than P during testing
 #define AUTOTUNE_RP_RATIO_FINAL            2.0f    // I is set 1x P after testing
@@ -449,7 +449,7 @@ static void autotune_attitude_control()
             if (autotune_test_max > AUTOTUNE_TARGET_RATE_CDS) {
                 // if max rotation rate was higher than target, reduce rate P
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp -= AUTOTUNE_RP_STEP;
+                    tune_roll_rp -= tune_roll_rp*AUTOTUNE_RP_STEP;
                     // abandon tuning if rate P falls below 0.01
                     if(tune_roll_rp < AUTOTUNE_RP_MIN) {
                         tune_roll_rp = AUTOTUNE_RP_MIN;
@@ -457,7 +457,7 @@ static void autotune_attitude_control()
                         Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                     }
                 }else{
-                    tune_pitch_rp -= AUTOTUNE_RP_STEP;
+                    tune_pitch_rp -= tune_pitch_rp*AUTOTUNE_RP_STEP;
                     // abandon tuning if rate P falls below 0.01
                     if( tune_pitch_rp < AUTOTUNE_RP_MIN ) {
                         tune_pitch_rp = AUTOTUNE_RP_MIN;
@@ -470,9 +470,9 @@ static void autotune_attitude_control()
                     ((autotune_state.axis == AUTOTUNE_AXIS_ROLL && tune_roll_rp <= AUTOTUNE_RP_MAX) ||
                     (autotune_state.axis == AUTOTUNE_AXIS_PITCH && tune_pitch_rp <= AUTOTUNE_RP_MAX)) ) {
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp += AUTOTUNE_RP_STEP*2.0f;
+                    tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP*2.0f;
                 }else{
-                    tune_pitch_rp += AUTOTUNE_RP_STEP*2.0f;
+                    tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP*2.0f;
                 }
             }else{
                 // if "bounce back rate" if greater than 10% of requested rate (i.e. >9deg/sec) this is a good tune
@@ -485,7 +485,7 @@ static void autotune_attitude_control()
                     }
                     // increase rate D (which should increase "bounce back rate")
                     if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                        tune_roll_rd += AUTOTUNE_RD_STEP*2.0f;
+                        tune_roll_rd += tune_roll_rd*AUTOTUNE_RD_STEP*2.0f;
                         // stop tuning if we hit max D
                         if (tune_roll_rd >= AUTOTUNE_RD_MAX) {
                             tune_roll_rd = AUTOTUNE_RD_MAX;
@@ -493,7 +493,7 @@ static void autotune_attitude_control()
                             Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                         }
                     }else{
-                        tune_pitch_rd += AUTOTUNE_RD_STEP*2.0f;
+                        tune_pitch_rd += tune_pitch_rd*AUTOTUNE_RD_STEP*2.0f;
                         // stop tuning if we hit max D
                         if (tune_pitch_rd >= AUTOTUNE_RD_MAX) {
                             tune_pitch_rd = AUTOTUNE_RD_MAX;
@@ -508,11 +508,11 @@ static void autotune_attitude_control()
             if (autotune_test_max > AUTOTUNE_TARGET_RATE_CDS) {
                 // if max rotation rate was higher than target, reduce rate P
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp -= AUTOTUNE_RP_STEP;
+                    tune_roll_rp -= tune_roll_rp*AUTOTUNE_RP_STEP;
                     // reduce rate D if tuning if rate P falls below 0.01
                     if(tune_roll_rp < AUTOTUNE_RP_MIN) {
                         tune_roll_rp = AUTOTUNE_RP_MIN;
-                        tune_roll_rd -= AUTOTUNE_RD_STEP;
+                        tune_roll_rd -= tune_roll_rd*AUTOTUNE_RD_STEP;
                         // stop tuning if we hit min D
                         if (tune_roll_rd <= AUTOTUNE_RD_MIN) {
                             tune_roll_rd = AUTOTUNE_RD_MIN;
@@ -521,11 +521,11 @@ static void autotune_attitude_control()
                         }
                     }
                 }else{
-                    tune_pitch_rp -= AUTOTUNE_RP_STEP;
+                    tune_pitch_rp -= tune_pitch_rp*AUTOTUNE_RP_STEP;
                     // reduce rate D if tuning if rate P falls below 0.01
                     if( tune_pitch_rp < AUTOTUNE_RP_MIN ) {
                         tune_pitch_rp = AUTOTUNE_RP_MIN;
-                        tune_pitch_rd -= AUTOTUNE_RD_STEP;
+                        tune_pitch_rd -= tune_pitch_rd*AUTOTUNE_RD_STEP;
                         // stop tuning if we hit min D
                         if (tune_pitch_rd <= AUTOTUNE_RD_MIN) {
                             tune_pitch_rd = AUTOTUNE_RD_MIN;
@@ -539,9 +539,9 @@ static void autotune_attitude_control()
                     ((autotune_state.axis == AUTOTUNE_AXIS_ROLL && tune_roll_rp <= AUTOTUNE_RP_MAX) ||
                     (autotune_state.axis == AUTOTUNE_AXIS_PITCH && tune_pitch_rp <= AUTOTUNE_RP_MAX)) ) {
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp += AUTOTUNE_RP_STEP;
+                    tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP;
                 }else{
-                    tune_pitch_rp += AUTOTUNE_RP_STEP;
+                    tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP;
                 }
             }else{
                 // if "bounce back rate" if less than 10% of requested rate (i.e. >9deg/sec) this is a good tune
@@ -554,7 +554,7 @@ static void autotune_attitude_control()
                     }
                     // decrease rate D (which should decrease "bounce back rate")
                     if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                        tune_roll_rd -= AUTOTUNE_RD_STEP;
+                        tune_roll_rd -= tune_roll_rd*AUTOTUNE_RD_STEP;
                         // stop tuning if we hit min D
                         if (tune_roll_rd <= AUTOTUNE_RD_MIN) {
                             tune_roll_rd = AUTOTUNE_RD_MIN;
@@ -562,7 +562,7 @@ static void autotune_attitude_control()
                             Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                         }
                     }else{
-                        tune_pitch_rd -= AUTOTUNE_RD_STEP;
+                        tune_pitch_rd -= tune_pitch_rd*AUTOTUNE_RD_STEP;
                         // stop tuning if we hit min D
                         if (tune_pitch_rd <= AUTOTUNE_RD_MIN) {
                             tune_pitch_rd = AUTOTUNE_RD_MIN;
@@ -584,7 +584,7 @@ static void autotune_attitude_control()
                 }
                 // increase rate P and I gains
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp += AUTOTUNE_RP_STEP;
+                    tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP;
                     // stop tuning if we hit max P
                     if (tune_roll_rp >= AUTOTUNE_RP_MAX) {
                         tune_roll_rp = AUTOTUNE_RP_MAX;
@@ -592,7 +592,7 @@ static void autotune_attitude_control()
                         Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                     }
                 }else{
-                    tune_pitch_rp += AUTOTUNE_RP_STEP;
+                    tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP;
                     // stop tuning if we hit max P
                     if (tune_pitch_rp >= AUTOTUNE_RP_MAX) {
                         tune_pitch_rp = AUTOTUNE_RP_MAX;
@@ -614,7 +614,7 @@ static void autotune_attitude_control()
                 }
                 // increase stabilize P and I gains
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_sp += AUTOTUNE_SP_STEP;
+                    tune_roll_sp += tune_roll_sp*AUTOTUNE_SP_STEP;
                     // stop tuning if we hit max P
                     if (tune_roll_sp >= AUTOTUNE_SP_MAX) {
                         tune_roll_sp = AUTOTUNE_SP_MAX;
@@ -622,7 +622,7 @@ static void autotune_attitude_control()
                         Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                     }
                 }else{
-                    tune_pitch_sp += AUTOTUNE_SP_STEP;
+                    tune_pitch_sp += tune_pitch_sp*AUTOTUNE_SP_STEP;
                     // stop tuning if we hit max P
                     if (tune_pitch_sp >= AUTOTUNE_SP_MAX) {
                         tune_pitch_sp = AUTOTUNE_SP_MAX;
