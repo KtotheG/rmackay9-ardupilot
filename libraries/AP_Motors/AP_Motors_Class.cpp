@@ -104,6 +104,13 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @User: Standard
     AP_GROUPINFO("THST_BAT_MN", 10, AP_Motors, _batt_voltage_min, AP_MOTORS_BAT_MN),
 
+    // @Param: MAT_YAW_MIN
+    // @DisplayName: bla
+    // @Description: Point at which the thrust saturates
+    // @Values: 0.9: Low, 1.0: High
+    // @User: Standard
+    AP_GROUPINFO("MAT_YAW_MIN", 11, AP_Motors, _matrix_yaw_min, AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM),
+
     AP_GROUPEND
 };
 
@@ -165,19 +172,6 @@ void AP_Motors::throttle_pass_through(int16_t pwm)
                 hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[i]), pwm);
             }
         }
-    }
-}
-
-// set_voltage - set voltage to be used for output scaling
-void AP_Motors::set_voltage(float volts)
-{
-    if(_batt_voltage_max > 0 && _batt_voltage_min < _batt_voltage_max) {
-        _batt_voltage = min(_batt_voltage_max, max(_batt_voltage_min, volts));
-        _batt_rem = _batt_voltage/_batt_voltage_max;         // ratio of current battery voltage to maximum battery voltage
-        _lift_max = _batt_rem*(1-_thrust_expo) + _thrust_expo*_batt_rem*_batt_rem;
-    } else {
-        _batt_rem = 1;
-        _lift_max = 1;
     }
 }
 
