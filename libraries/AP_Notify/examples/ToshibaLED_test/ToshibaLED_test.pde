@@ -37,7 +37,8 @@ const AP_HAL::HAL& hal = AP_HAL_BOARD_DRIVER;
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
 static ToshibaLED_PX4 toshiba_led;
 #else
-static ToshibaLED_I2C toshiba_led;
+//static ToshibaLED_I2C toshiba_led;
+static OreoLED_I2C toshiba_led;
 #endif
 
 static uint8_t led_state;
@@ -58,9 +59,9 @@ void setup(void)
 
     // turn on initialising notification
     AP_Notify::flags.initialising = false;
-    AP_Notify::flags.save_trim = true;
-    AP_Notify::flags.gps_status = 1;
-    AP_Notify::flags.armed = 1;
+    AP_Notify::flags.save_trim = false;
+    AP_Notify::flags.gps_status = 3;
+    AP_Notify::flags.armed = 0;
     AP_Notify::flags.pre_arm_check = 1;
 }
 
