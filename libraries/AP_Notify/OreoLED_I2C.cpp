@@ -17,7 +17,9 @@
  */
 
 #include <AP_HAL.h>
-#include "RGBLed.h"
+
+#if CONFIG_HAL_BOARD != HAL_BOARD_PX4
+
 #include "OreoLED_I2C.h"
 
 extern const AP_HAL::HAL& hal;
@@ -27,19 +29,16 @@ extern const AP_HAL::HAL& hal;
 #define OREOLED_DIM                     0xFF    // dim
 #define OREOLED_OFF                     0x00    // off
 
-#define OREOLED_ADDRESS1                0x68    // default I2C bus address for 1st LED
-#define OREOLED_ADDRESS2                0x69    // default I2C bus address for 2nd LED
-#define OREOLED_ADDRESS3                0x6A    // default I2C bus address for 3rd LED
-#define OREOLED_ADDRESS4                0x6B    // default I2C bus address for 4th LED
+#define OREOLED_BASE_I2C_ADDR           0x68    // default I2C bus address for 1st LED
 
-#define OREOLED_PATTTERN_OFF            0x00    // led off
-#define OREOLED_PATTTERN_SINE           0x01    // sine wave pattern
-#define OREOLED_PATTTERN_SOLID          0x02    // solid pattern
-#define OREOLED_PATTTERN_SIREN          0x03    // siren pattern
-#define OREOLED_PATTTERN_STROBE         0x04    // strobe pattern
-#define OREOLED_PATTTERN_FADEIN         0x05    // fade in pattern
-#define OREOLED_PATTTERN_FADEOUT        0x06    // fade out pattern
-#define OREOLED_PATTTERN_PARAMUPDATE    0x07    // parameter update pattern
+#define OREOLED_PATTERN_OFF             0x00    // led off
+#define OREOLED_PATTERN_SINE            0x01    // sine wave pattern
+#define OREOLED_PATTERN_SOLID           0x02    // solid pattern
+#define OREOLED_PATTERN_SIREN           0x03    // siren pattern
+#define OREOLED_PATTERN_STROBE          0x04    // strobe pattern
+#define OREOLED_PATTERN_FADEIN          0x05    // fade in pattern
+#define OREOLED_PATTERN_FADEOUT         0x06    // fade out pattern
+#define OREOLED_PATTERN_PARAMUPDATE     0x07    // parameter update pattern
 
 #define OREOLED_PARAM_BIAS_RED          0x00    // set redness
 #define OREOLED_PARAM_BIAS_GREEN        0x01    // set greenness
@@ -65,13 +64,15 @@ extern const AP_HAL::HAL& hal;
 #define OREOLED_PARAM_MACRO_WHITE       0x0A
 
 // constructor
-OreoLED_I2C::OreoLED_I2C():
-        RGBLed(OREOLED_OFF, OREOLED_BRIGHT, OREOLED_MEDIUM, OREOLED_DIM),
-        _healthy1(false), _healthy2(false), _healthy3(false), _healthy4(false)
+OreoLED_I2C::OreoLED_I2C() : NotifyDevice(),
+    _overall_health(false)
 {
+    // default individual led health to false
+    memset(_healthy, 0, sizeof(_healthy));
 }
 
-bool OreoLED_I2C::hw_init()
+// init - initialised the device
+bool OreoLED_I2C::init()
 {
     // get pointer to i2c bus semaphore
     AP_HAL::Semaphore* i2c_sem = hal.i2c->get_semaphore();
@@ -84,13 +85,20 @@ bool OreoLED_I2C::hw_init()
     // disable recording of i2c lockup errors
     hal.i2c->ignore_errors(true);
 
-    uint8_t cmd[] = {OREOLED_PATTTERN_OFF};
+    uint8_t cmd[] = {OREOLED_PATTERN_OFF};
+
+    // default overall health to unhealthy
+    _overall_health = false;
 
     // attempt to turn each led off
-    _healthy1 = (hal.i2c->write(OREOLED_ADDRESS1, sizeof(cmd), cmd) == 0);
-    _healthy2 = (hal.i2c->write(OREOLED_ADDRESS2, sizeof(cmd), cmd) == 0);
-    _healthy3 = (hal.i2c->write(OREOLED_ADDRESS3, sizeof(cmd), cmd) == 0);
-    _healthy4 = (hal.i2c->write(OREOLED_ADDRESS4, sizeof(cmd), cmd) == 0);
+    for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
+        _healthy[i] = (hal.i2c->write(OREOLED_BASE_I2C_ADDR + i, sizeof(cmd), cmd) == 0);
+
+        // set overall health
+        if (_healthy[i]) {
+            _overall_health = true;
+        }
+    }
 
     // re-enable recording of i2c lockup errors
     hal.i2c->ignore_errors(false);
@@ -99,38 +107,65 @@ bool OreoLED_I2C::hw_init()
     i2c_sem->give();
 
     // return success if we managed to talk to at least one LED
-    return (_healthy1 || _healthy2 || _healthy3 || _healthy4);
+    return (_overall_health);
+}
+
+// update - updates device according to timed_updated.  Should be
+// called at 50Hz
+void OreoLED_I2C::update()
+{
+    static uint8_t counter = 0;
+
+    // return immediately if not healthy
+    if (!_overall_health) {
+        return;
+    }
+
+    // increment counter
+    counter++;
+    if (counter >= 100) {
+        counter = 0;
+    }
+
+    // flash LED red
+    if (counter == 0) {
+        set_rgb(0xFF, 0x0, 0x0);
+    }
+
+    // flash LED green
+    if (counter == 50) {
+        set_rgb(0x0, 0xFF, 0x0);
+    }
 }
 
 // set_rgb - set color as a combination of red, green and blue values
-bool OreoLED_I2C::hw_set_rgb(uint8_t red, uint8_t green, uint8_t blue)
+void OreoLED_I2C::set_rgb(uint8_t red, uint8_t green, uint8_t blue)
 {
+    // return immediately if no healty leds
+    if (!_overall_health) {
+        return;
+    }
+
     // get pointer to i2c bus semaphore
     AP_HAL::Semaphore* i2c_sem = hal.i2c->get_semaphore();
 
     // exit immediately if we can't take the semaphore
     if (i2c_sem == NULL || !i2c_sem->take(5)) {
-        return false;
+        return;
     }
 
     // create desired pattern command
-    uint8_t cmd[] = {OREOLED_PATTTERN_SOLID, OREOLED_PARAM_BIAS_RED, red, OREOLED_PARAM_BIAS_GREEN, green, OREOLED_PARAM_BIAS_BLUE, blue};
+    uint8_t cmd[] = {OREOLED_PATTERN_SOLID, OREOLED_PARAM_BIAS_RED, red, OREOLED_PARAM_BIAS_GREEN, green, OREOLED_PARAM_BIAS_BLUE, blue};
 
     // send pattern to healthy LEDs
-    if (_healthy1) {
-        hal.i2c->write(OREOLED_ADDRESS1, sizeof(cmd), cmd);
-    }
-    if (_healthy2) {
-        hal.i2c->write(OREOLED_ADDRESS2, sizeof(cmd), cmd);
-    }
-    if (_healthy3) {
-        hal.i2c->write(OREOLED_ADDRESS3, sizeof(cmd), cmd);
-    }
-    if (_healthy4) {
-        hal.i2c->write(OREOLED_ADDRESS4, sizeof(cmd), cmd);
+    for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
+        if (_healthy[i]) {
+            hal.i2c->write(OREOLED_BASE_I2C_ADDR + i, sizeof(cmd), cmd);
+        }
     }
 
     // give back i2c semaphore
     i2c_sem->give();
-    return true;
 }
+
+#endif // CONFIG_HAL_BOARD != HAL_BOARD_PX4

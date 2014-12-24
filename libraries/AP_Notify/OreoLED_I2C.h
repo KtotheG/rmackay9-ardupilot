@@ -17,21 +17,36 @@
 #ifndef __OREOLED_I2C_H__
 #define __OREOLED_I2C_H__
 
-class OreoLED_I2C : public RGBLed
+#include <AP_HAL.h>
+#include "NotifyDevice.h"
+
+#define OREOLED_NUM_LEDS    4   // maximum number of individual LEDs connected to the oreo led cpu
+
+class OreoLED_I2C : public NotifyDevice
 {
 public:
     // constuctor
     OreoLED_I2C();
 
-    bool hw_init(void);
-    bool hw_set_rgb(uint8_t r, uint8_t g, uint8_t b);
+    // init - initialised the device
+    bool init(void);
+
+    // update - updates device according to timed_updated.  Should be
+    // called at 50Hz
+    void update();
+
+    // healthy - return true if at least one LED is responding
+    bool healthy() const { return _overall_health; }
+
+    // set_rgb - set color as a combination of red, green and blue values for all LEDs
+    void set_rgb(uint8_t red, uint8_t green, uint8_t blue);
 
 private:
+    // overall health
+    uint8_t _overall_health : 1;
+
     // health flags for each LED
-    uint8_t _healthy1 : 1;
-    uint8_t _healthy2 : 1;
-    uint8_t _healthy3 : 1;
-    uint8_t _healthy4 : 1;
+    uint8_t _healthy[OREOLED_NUM_LEDS];
 };
 
 #endif // __OREOLED_I2C_H__
