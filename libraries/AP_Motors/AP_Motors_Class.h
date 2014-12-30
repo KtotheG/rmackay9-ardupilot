@@ -137,6 +137,9 @@ public:
     // set_voltage - set voltage to be used for output scaling
     virtual void        set_voltage(float volts){ _batt_voltage = volts; };
 
+    // set_current - set voltage to be used for output scaling
+    virtual void        set_current(float current){ _batt_current = current; };
+
     // set_voltage - set yaw minimum mix
     virtual void        set_yaw_min(float yaw_min){ _matrix_yaw_min = yaw_min; };
 
@@ -194,8 +197,13 @@ protected:
     AP_Int16            _spin_when_armed;       // used to control whether the motors always spin when armed.  pwm value above radio_min
 
     AP_Float            _batt_voltage;          // last battery voltage
-    AP_Float            _batt_rem;          // last battery voltage
-    AP_Float            _lift_max;          // last battery voltage
+    AP_Float            _batt_voltage_resting;  // last battery voltage
+    AP_Float            _batt_current;          // last battery voltage
+    AP_Float            _batt_current_resting;  // last battery voltage
+    AP_Float            _batt_resistance;       // last battery voltage
+    AP_Int16            _batt_timer;            // last battery voltage
+    AP_Float            _batt_rem;              // last battery voltage
+    AP_Float            _lift_max;              // last battery voltage
     AP_Float            _batt_voltage_max;          // last battery voltage
     AP_Float            _batt_voltage_min;          // last battery voltage
     AP_Float            _throttle_low_comp;     // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
