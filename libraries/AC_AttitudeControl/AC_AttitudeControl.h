@@ -42,6 +42,8 @@
 
 #define AC_ATTITUDE_CONTROL_RATE_BF_FF_DEFAULT          0       // body-frame rate feedforward enabled by default
 
+#define AC_ATTITUDE_CONTROL_RATE_YAW_FILT_DEFAULT       1.0f    // yaw pid filter in Hz
+
 class AC_AttitudeControl {
 public:
 	AC_AttitudeControl( AP_AHRS &ahrs,
@@ -78,6 +80,9 @@ public:
 
     // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
     void set_dt(float delta_sec);
+
+    // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    void set_rate_yaw_filt(float rate_yaw_filt);
 
     // relax_bf_rate_controller - ensure body-frame rate controller has zero errors to relax rate controller output
     void relax_bf_rate_controller();
@@ -226,6 +231,7 @@ protected:
     AP_Float            _accel_rp_max;          // maximum rotation acceleration for earth-frame roll and pitch axis
     AP_Float            _accel_y_max;           // maximum rotation acceleration for earth-frame yaw axis
     AP_Int8             _rate_bf_ff_enabled;    // Enable/Disable body frame rate feed forward
+    AP_Float            _rate_yaw_filt;         // filter frequency of the yaw pid filter in Hz
 
     // internal variables
     // To-Do: make rate targets a typedef instead of Vector3f?

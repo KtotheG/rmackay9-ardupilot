@@ -60,6 +60,15 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @User: Advanced
     AP_GROUPINFO("RATE_FF_ENAB", 5, AC_AttitudeControl, _rate_bf_ff_enabled, AC_ATTITUDE_CONTROL_RATE_BF_FF_DEFAULT),
 
+    // @Param: RATE_YAW_FILT
+    // @DisplayName: Yaw PID filter
+    // @Description: Yaw PID filter
+    // @Units: Hz
+    // @Range: 0.01 10
+    // @Increment: 0.001
+    // @User: Advanced
+    AP_GROUPINFO("RATE_YAW_FLT",  6, AC_AttitudeControl, _rate_yaw_filt, AC_ATTITUDE_CONTROL_RATE_YAW_FILT_DEFAULT),
+
     AP_GROUPEND
 };
 
@@ -83,7 +92,13 @@ void AC_AttitudeControl::set_dt(float delta_sec)
     // set attitude controller's D term filters
     _pid_rate_roll.set_d_lpf_alpha(ins_filter, _dt);
     _pid_rate_pitch.set_d_lpf_alpha(ins_filter, _dt);
-    _pid_rate_yaw.set_d_lpf_alpha(ins_filter/4.0f, _dt);  // half
+    _pid_rate_yaw.set_d_lpf_alpha(ins_filter/2, _dt);
+}
+
+void AC_AttitudeControl::set_rate_yaw_filt(float rate_yaw_filt)
+{
+    _rate_yaw_filt = rate_yaw_filt;
+    _pid_rate_yaw.set_d_lpf_alpha(_rate_yaw_filt, _dt);
 }
 
 // relax_bf_rate_controller - ensure body-frame rate controller has zero errors to relax rate controller output
