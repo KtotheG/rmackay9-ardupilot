@@ -49,9 +49,11 @@
 #define AUTOTUNE_RD_STEP                  0.05f    // minimum increment when increasing/decreasing Rate D term
 #define AUTOTUNE_RP_STEP                  0.05f    // minimum increment when increasing/decreasing Rate P term
 #define AUTOTUNE_SP_STEP                  0.05f    // minimum increment when increasing/decreasing Stab P term
-#define AUTOTUNE_SP_BACKOFF               0.75f    // Stab P gains are reduced to 75% of their maximum value discovered during tuning
+#define AUTOTUNE_RD_BACKOFF               0.5f     // Rate D gains are reduced to 50% of their maximum value discovered during tuning
+#define AUTOTUNE_RP_BACKOFF               0.975f   // Rate P gains are reduced to 97.5% of their maximum value discovered during tuning
+#define AUTOTUNE_SP_BACKOFF               0.6f     // Stab P gains are reduced to 60% of their maximum value discovered during tuning
 #define AUTOTUNE_PI_RATIO_FOR_TESTING      0.1f    // I is set 10x smaller than P during testing
-#define AUTOTUNE_RP_RATIO_FINAL            2.0f    // I is set 1x P after testing
+#define AUTOTUNE_PI_RATIO_FINAL            0.5f    // I is set 1x P after testing
 #define AUTOTUNE_RD_MIN                  0.002f    // minimum Rate D value
 #define AUTOTUNE_RD_MAX                  0.050f    // maximum Rate D value
 #define AUTOTUNE_RP_MIN                   0.01f    // minimum Rate P value
@@ -476,7 +478,7 @@ static void autotune_attitude_control()
                 }
             }else{
                 // if "bounce back rate" if greater than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-                if (autotune_test_max-autotune_test_min > AUTOTUNE_TARGET_RATE_CDS*AUTOTUNE_AGGRESSIVENESS) {
+                if (autotune_test_max-autotune_test_min > autotune_test_max*AUTOTUNE_AGGRESSIVENESS) {
                     autotune_counter++;
                 }else{
                     // bounce back was too small so reduce number of good tunes
@@ -545,7 +547,7 @@ static void autotune_attitude_control()
                 }
             }else{
                 // if "bounce back rate" if less than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-                if (autotune_test_max-autotune_test_min < AUTOTUNE_TARGET_RATE_CDS*AUTOTUNE_AGGRESSIVENESS) {
+                if (autotune_test_max-autotune_test_min < autotune_test_max*AUTOTUNE_AGGRESSIVENESS) {
                     autotune_counter++;
                 }else{
                     // bounce back was too large so reduce number of good tunes
@@ -643,9 +645,25 @@ static void autotune_attitude_control()
             autotune_counter = 0;
 
             // move to the next tuning type
-            if (autotune_state.tune_type < AUTOTUNE_TYPE_SP_UP) {
+            if (autotune_state.tune_type == AUTOTUNE_TYPE_RD_UP) {
                 autotune_state.tune_type++;
-            }else{
+            } else if (autotune_state.tune_type == AUTOTUNE_TYPE_RD_DOWN) {
+                autotune_state.tune_type++;
+                if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
+                    tune_roll_rd = tune_roll_rd * AUTOTUNE_RD_BACKOFF;
+                    tune_roll_rp = tune_roll_rp * AUTOTUNE_RD_BACKOFF;
+                }else{
+                    tune_pitch_rd = tune_pitch_rd * AUTOTUNE_RD_BACKOFF;
+                    tune_pitch_rp = tune_pitch_rp * AUTOTUNE_RD_BACKOFF;
+                }
+            } else if (autotune_state.tune_type == AUTOTUNE_TYPE_RP_UP) {
+                autotune_state.tune_type++;
+                if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
+                    tune_roll_sp = tune_roll_sp * AUTOTUNE_SP_BACKOFF;
+                }else{
+                    tune_pitch_sp = tune_pitch_sp * AUTOTUNE_SP_BACKOFF;
+                }
+            } else if (autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP) {
                 // we've reached the end of a D-up-down PI-up-down tune type cycle
                 autotune_state.tune_type = AUTOTUNE_TYPE_RD_UP;
 
@@ -656,8 +674,6 @@ static void autotune_attitude_control()
                     AP_Notify::events.autotune_next_axis = 1;
                 }else{
                     tune_pitch_sp = tune_pitch_sp * AUTOTUNE_SP_BACKOFF;
-                    tune_roll_sp = min(tune_roll_sp, tune_pitch_sp);
-                    tune_pitch_sp = min(tune_roll_sp, tune_pitch_sp);
                     // if we've just completed pitch we have successfully completed the autotune
                     // change to TESTING mode to allow user to fly with new gains
                     autotune_state.mode = AUTOTUNE_MODE_SUCCESS;
@@ -749,11 +765,11 @@ static void autotune_load_tuned_gains()
     // sanity check the gains
     if (tune_roll_rp != 0 && tune_pitch_rp != 0) {
         g.pid_rate_roll.kP(tune_roll_rp);
-        g.pid_rate_roll.kI(tune_roll_rp*AUTOTUNE_RP_RATIO_FINAL);
+        g.pid_rate_roll.kI(tune_roll_rp*AUTOTUNE_PI_RATIO_FINAL);
         g.pid_rate_roll.kD(tune_roll_rd);
         g.p_stabilize_roll.kP(tune_roll_sp);
         g.pid_rate_pitch.kP(tune_pitch_rp);
-        g.pid_rate_pitch.kI(tune_pitch_rp*AUTOTUNE_RP_RATIO_FINAL);
+        g.pid_rate_pitch.kI(tune_pitch_rp*AUTOTUNE_PI_RATIO_FINAL);
         g.pid_rate_pitch.kD(tune_pitch_rd);
         g.p_stabilize_pitch.kP(tune_pitch_sp);
     }else{
@@ -820,13 +836,13 @@ static void autotune_save_tuning_gains()
 
             // rate roll gains
             g.pid_rate_roll.kP(tune_roll_rp);
-            g.pid_rate_roll.kI(tune_roll_rp*AUTOTUNE_RP_RATIO_FINAL);
+            g.pid_rate_roll.kI(tune_roll_rp*AUTOTUNE_PI_RATIO_FINAL);
             g.pid_rate_roll.kD(tune_roll_rd);
             g.pid_rate_roll.save_gains();
 
             // rate pitch gains
             g.pid_rate_pitch.kP(tune_pitch_rp);
-            g.pid_rate_pitch.kI(tune_pitch_rp*AUTOTUNE_RP_RATIO_FINAL);
+            g.pid_rate_pitch.kI(tune_pitch_rp*AUTOTUNE_PI_RATIO_FINAL);
             g.pid_rate_pitch.kD(tune_pitch_rd);
             g.pid_rate_pitch.save_gains();
 
