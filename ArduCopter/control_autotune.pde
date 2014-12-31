@@ -578,6 +578,15 @@ static void autotune_attitude_control()
         } else if (autotune_state.tune_type == AUTOTUNE_TYPE_RP_UP) {
             // if max rotation rate greater than target, this is a good tune
             if (autotune_test_max > AUTOTUNE_TARGET_RATE_CDS) {
+                // added to reduce the time taken to tune without loosing accuracy
+                if(autotune_counter == 0){
+                    if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
+                        tune_roll_rp -= tune_roll_rp*AUTOTUNE_RP_STEP*3;
+                    }else{
+                        tune_pitch_rp -= tune_roll_rp*AUTOTUNE_RP_STEP*3;
+                    }
+                    autotune_counter++;
+                }
                 autotune_counter++;
             }else{
                 // rotation rate was too low so reduce number of good tunes
@@ -586,7 +595,12 @@ static void autotune_attitude_control()
                 }
                 // increase rate P and I gains
                 if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP;
+                    if(autotune_counter > 0){
+                        tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP;
+                    }else{
+                        // added to reduce the time taken to tune without loosing accuracy
+                        tune_roll_rp += tune_roll_rp*AUTOTUNE_RP_STEP*4;
+                    }
                     // stop tuning if we hit max P
                     if (tune_roll_rp >= AUTOTUNE_RP_MAX) {
                         tune_roll_rp = AUTOTUNE_RP_MAX;
@@ -594,7 +608,12 @@ static void autotune_attitude_control()
                         Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
                     }
                 }else{
-                    tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP;
+                    if(autotune_counter > 0){
+                        tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP;
+                    }else{
+                        // added to reduce the time taken to tune without loosing accuracy
+                        tune_pitch_rp += tune_pitch_rp*AUTOTUNE_RP_STEP*4;
+                    }
                     // stop tuning if we hit max P
                     if (tune_pitch_rp >= AUTOTUNE_RP_MAX) {
                         tune_pitch_rp = AUTOTUNE_RP_MAX;
