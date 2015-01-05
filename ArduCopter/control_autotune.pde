@@ -547,7 +547,7 @@ static void autotune_attitude_control()
                 }
             }else{
                 // if "bounce back rate" if less than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-                if (autotune_test_max-autotune_test_min < autotune_test_max*AUTOTUNE_AGGRESSIVENESS) {
+                if (autotune_test_max-autotune_test_min < autotune_test_max*(AUTOTUNE_AGGRESSIVENESS*0.5)) {
                     autotune_counter++;
                 }else{
                     // bounce back was too large so reduce number of good tunes
