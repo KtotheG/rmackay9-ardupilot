@@ -314,6 +314,7 @@ public:
         k_param_acro_balance_roll,
         k_param_acro_balance_pitch,
         k_param_acro_yaw_p, // 244
+        k_param_autotune_axis_bitmask,  // 245
 
         // 254,255: reserved
     };
@@ -466,6 +467,9 @@ public:
     AC_P                    p_stabilize_pitch;
     AC_P                    p_stabilize_yaw;
     AC_P                    p_alt_hold;
+
+    // Autotune
+    AP_Int8                 autotune_axis_bitmask;
 
     // Note: keep initializers here in the same order as they are declared
     // above.
