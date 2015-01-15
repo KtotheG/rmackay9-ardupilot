@@ -47,19 +47,22 @@
 #define AUTOTUNE_TESTING_STEP_TIMEOUT_MS    500    // timeout for tuning mode's testing step
 #define AUTOTUNE_LEVEL_ANGLE_CD             300    // angle which qualifies as level
 #define AUTOTUNE_REQUIRED_LEVEL_TIME_MS     250    // time we require the copter to be level
-#define AUTOTUNE_AGGRESSIVENESS            0.1f    // tuning for 10% overshoot
+#define AUTOTUNE_AGGRESSIVENESS            0.05f    // tuning for 10% overshoot
 #define AUTOTUNE_RD_STEP                  0.05f    // minimum increment when increasing/decreasing Rate D term
 #define AUTOTUNE_RP_STEP                  0.05f    // minimum increment when increasing/decreasing Rate P term
 #define AUTOTUNE_SP_STEP                  0.05f    // minimum increment when increasing/decreasing Stab P term
 #define AUTOTUNE_RD_BACKOFF               1.0f     // Rate D gains are reduced to 50% of their maximum value discovered during tuning
-#define AUTOTUNE_RP_BACKOFF               1.0f   // Rate P gains are reduced to 97.5% of their maximum value discovered during tuning
-#define AUTOTUNE_SP_BACKOFF               0.75f     // Stab P gains are reduced to 60% of their maximum value discovered during tuning
+#define AUTOTUNE_RP_BACKOFF               1.0f     // Rate P gains are reduced to 97.5% of their maximum value discovered during tuning
+#define AUTOTUNE_SP_BACKOFF               1.0f     // Stab P gains are reduced to 60% of their maximum value discovered during tuning
 #define AUTOTUNE_PI_RATIO_FOR_TESTING      0.1f    // I is set 10x smaller than P during testing
-#define AUTOTUNE_PI_RATIO_FINAL            1.05f    // I is set 1x P after testing
+#define AUTOTUNE_PI_RATIO_FINAL            1.0f   // I is set 1x P after testing
+#define AUTOTUNE_YAW_PI_RATIO_FINAL        0.1f   // I is set 1x P after testing
 #define AUTOTUNE_RD_MIN                  0.002f    // minimum Rate D value
 #define AUTOTUNE_RD_MAX                  0.050f    // maximum Rate D value
+#define AUTOTUNE_RLPF_MIN                  0.1f    // minimum Rate D value
+#define AUTOTUNE_RLPF_MAX                 20.0f    // maximum Rate D value
 #define AUTOTUNE_RP_MIN                   0.01f    // minimum Rate P value
-#define AUTOTUNE_RP_MAX                    1.0f    // maximum Rate P value
+#define AUTOTUNE_RP_MAX                    100.0f    // maximum Rate P value
 #define AUTOTUNE_SP_MAX                   20.0f    // maximum Stab P value
 #define AUTOTUNE_SUCCESS_COUNT                4    // how many successful iterations we need to freeze at current gains
 
@@ -68,8 +71,8 @@
 #define AUTOTUNE_TARGET_RATE_RLLPIT_CDS    9000    // target roll/pitch rate during AUTOTUNE_STEP_TWITCHING step
 
 // yaw axis
-#define AUTOTUNE_TARGET_ANGLE_YAW_CD       2000    // target angle during TESTING_RATE step that will cause us to move to next step
-#define AUTOTUNE_TARGET_RATE_YAW_CDS       4500    // target yaw rate during AUTOTUNE_STEP_TWITCHING step
+#define AUTOTUNE_TARGET_ANGLE_YAW_CD       500     // target angle during TESTING_RATE step that will cause us to move to next step
+#define AUTOTUNE_TARGET_RATE_YAW_CDS       3000    // target yaw rate during AUTOTUNE_STEP_TWITCHING step
 
 // Auto Tune message ids for ground station
 #define AUTOTUNE_MESSAGE_STARTED 0
@@ -129,12 +132,12 @@ static float    autotune_start_yaw;                                         // t
 // backup of currently being tuned parameter values
 static float    orig_roll_rp = 0, orig_roll_ri, orig_roll_rd, orig_roll_sp;
 static float    orig_pitch_rp = 0, orig_pitch_ri, orig_pitch_rd, orig_pitch_sp;
-static float    orig_yaw_rp = 0, orig_yaw_ri, orig_yaw_rd, orig_yaw_sp;
+static float    orig_yaw_rp = 0, orig_yaw_ri, orig_yaw_rLPF, orig_yaw_sp;
 
 // currently being tuned parameter values
 static float    tune_roll_rp, tune_roll_rd, tune_roll_sp;
 static float    tune_pitch_rp, tune_pitch_rd, tune_pitch_sp;
-static float    tune_yaw_rp, tune_yaw_rd, tune_yaw_sp;
+static float    tune_yaw_rp, tune_yaw_rLPF, tune_yaw_sp;
 
 // autotune_init - should be called when autotune mode is selected
 static bool autotune_init(bool ignore_checks)
@@ -291,8 +294,6 @@ static void autotune_run()
                 // set gains to their intra-test values (which are very close to the original gains)
                 // autotune_load_intra_test_gains(); //I think we should be keeping the originals here to let the I term settle quickly
                 autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL; // set tuning step back from beginning
-                autotune_step_start_time = millis();
-                autotune_step_stop_time = autotune_step_start_time + AUTOTUNE_TESTING_STEP_TIMEOUT_MS;
                 // recapture target base yaw rate
                 // todo: get desired yaw value
                 autotune_start_yaw = ahrs.yaw_sensor;
@@ -335,7 +336,7 @@ static void autotune_attitude_control()
         attitude_control.limit_angle_to_rate_request(true);
 
         // hold level attitude
-        attitude_control.angle_ef_roll_pitch_rate_ef_yaw(0.0f, 0.0f, 0.0f);
+        attitude_control.angle_ef_roll_pitch_yaw( 0.0f, 0.0f, autotune_start_yaw, false);
 
         // hold the copter level for 0.25 seconds before we begin a twitch
         // reset counter if we are no longer level
@@ -348,6 +349,7 @@ static void autotune_attitude_control()
             // init variables for next step
             autotune_state.step = AUTOTUNE_STEP_TWITCHING;
             autotune_step_start_time = millis();
+            autotune_step_stop_time = autotune_step_start_time + AUTOTUNE_TESTING_STEP_TIMEOUT_MS;
             autotune_test_max = 0;
             autotune_test_min = 0;
             rotation_rate = 0;
@@ -412,7 +414,7 @@ static void autotune_attitude_control()
             break;
         case AUTOTUNE_AXIS_YAW:
             rotation_rate = ToDeg(fabs(ahrs.get_gyro().z)) * 100.0f;
-            lean_angle = labs(wrap_180_cd_float(autotune_start_yaw - ahrs.yaw_sensor));
+            lean_angle = labs(wrap_180_cd(ahrs.yaw_sensor-(int32_t)autotune_start_yaw));
             break;
         }
 
@@ -447,7 +449,7 @@ static void autotune_attitude_control()
             Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_pitch_rp, tune_pitch_rd, tune_pitch_sp);
             break;
         case AUTOTUNE_AXIS_YAW:
-            Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_yaw_rp, tune_yaw_rd, tune_yaw_sp);
+            Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_yaw_rp, tune_yaw_rLPF, tune_yaw_sp);
             break;
         }
 
@@ -462,7 +464,7 @@ static void autotune_attitude_control()
                 autotune_updating_d_up(tune_pitch_rd, AUTOTUNE_RD_MIN, AUTOTUNE_RD_MAX, AUTOTUNE_RD_STEP, tune_pitch_rp, AUTOTUNE_RP_MIN, AUTOTUNE_RP_MAX, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
                 break;
             case AUTOTUNE_AXIS_YAW:
-                autotune_updating_d_up(tune_yaw_rd, AUTOTUNE_RD_MIN, AUTOTUNE_RD_MAX, AUTOTUNE_RD_STEP, tune_yaw_rp, AUTOTUNE_RP_MIN, AUTOTUNE_RP_MAX, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
+                autotune_updating_d_up(tune_yaw_rLPF, AUTOTUNE_RLPF_MIN, AUTOTUNE_RLPF_MAX, AUTOTUNE_RD_STEP, tune_yaw_rp, AUTOTUNE_RP_MIN, AUTOTUNE_RP_MAX, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
                 break;
             }
             break;
@@ -476,7 +478,7 @@ static void autotune_attitude_control()
                 autotune_updating_d_down(tune_pitch_rd, AUTOTUNE_RD_MIN, AUTOTUNE_RD_STEP, tune_pitch_rp, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
                 break;
             case AUTOTUNE_AXIS_YAW:
-                autotune_updating_d_down(tune_yaw_rd, AUTOTUNE_RD_MIN, AUTOTUNE_RD_STEP, tune_yaw_rp, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
+                autotune_updating_d_down(tune_yaw_rLPF, AUTOTUNE_RLPF_MIN, AUTOTUNE_RD_STEP, tune_yaw_rp, AUTOTUNE_RP_STEP, target_rate, autotune_test_min, autotune_test_max);
                 break;
             }
             break;
@@ -510,9 +512,6 @@ static void autotune_attitude_control()
             break;
         }
 
-        // reverse direction
-        autotune_state.positive_direction = !autotune_state.positive_direction;
-
         // we've complete this step, finalise pids and move to next step
         if (autotune_counter >= AUTOTUNE_SUCCESS_COUNT) {
 
@@ -536,7 +535,7 @@ static void autotune_attitude_control()
                     tune_pitch_rp = tune_pitch_rp * AUTOTUNE_RD_BACKOFF;
                     break;
                 case AUTOTUNE_AXIS_YAW:
-                    tune_yaw_rd = tune_yaw_rd * AUTOTUNE_RD_BACKOFF;
+                    tune_yaw_rLPF = tune_yaw_rLPF * AUTOTUNE_RD_BACKOFF;
                     tune_yaw_rp = tune_yaw_rp * AUTOTUNE_RD_BACKOFF;
                     break;
                 }
@@ -599,6 +598,11 @@ static void autotune_attitude_control()
             }
         }
 
+        // reverse direction
+        autotune_state.positive_direction = !autotune_state.positive_direction;
+
+        autotune_start_yaw = ahrs.yaw_sensor;
+
         // reset testing step
         autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL;
         autotune_step_start_time = millis();
@@ -636,6 +640,7 @@ static void autotune_backup_gains_and_initialise()
     autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL;
     autotune_step_start_time = millis();
     autotune_state.tune_type = AUTOTUNE_TYPE_RD_UP;
+    autotune_start_yaw = ahrs.yaw_sensor;
 
     // backup original pids and initialise tuned pid values
     if (autotune_roll_enabled()) {
@@ -659,10 +664,10 @@ static void autotune_backup_gains_and_initialise()
     if (autotune_yaw_enabled()) {
         orig_yaw_rp = g.pid_rate_yaw.kP();
         orig_yaw_ri = g.pid_rate_yaw.kI();
-        orig_yaw_rd = g.pid_rate_yaw.kD();
+        orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
         orig_yaw_sp = g.p_stabilize_yaw.kP();
         tune_yaw_rp = g.pid_rate_yaw.kP();
-        tune_yaw_rd = g.pid_rate_yaw.kD();
+        tune_yaw_rLPF = attitude_control.get_rate_yaw_filt();
         tune_yaw_sp = g.p_stabilize_yaw.kP();
     }
 
@@ -689,7 +694,7 @@ static void autotune_load_orig_gains()
     if (autotune_yaw_enabled() && orig_yaw_rp != 0) {
         g.pid_rate_yaw.kP(orig_yaw_rp);
         g.pid_rate_yaw.kI(orig_yaw_ri);
-        g.pid_rate_yaw.kD(orig_yaw_rd);
+        attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
         g.p_stabilize_yaw.kP(orig_yaw_sp);
     }
 }
@@ -723,7 +728,7 @@ static void autotune_load_tuned_gains()
         if (tune_yaw_rp != 0) {
             g.pid_rate_yaw.kP(tune_yaw_rp);
             g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_PI_RATIO_FINAL);
-            g.pid_rate_yaw.kD(tune_yaw_rd);
+            attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
             g.p_stabilize_yaw.kP(tune_yaw_sp);
         } else {
             failed = true;
@@ -766,7 +771,7 @@ static void autotune_load_intra_test_gains()
         if (orig_yaw_rp != 0) {
             g.pid_rate_yaw.kP(orig_yaw_rp);
             g.pid_rate_yaw.kI(orig_yaw_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
-            g.pid_rate_yaw.kD(orig_yaw_rd);
+            attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
             g.p_stabilize_yaw.kP(orig_yaw_sp);
         } else {
             failed = true;
@@ -808,7 +813,7 @@ static void autotune_load_twitch_gains()
             if (tune_yaw_rp != 0) {
                 g.pid_rate_yaw.kP(tune_yaw_rp);
                 g.pid_rate_yaw.kI(tune_yaw_rp*0.01f);
-                g.pid_rate_yaw.kD(tune_yaw_rd);
+                attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
             }else{
                 failed = true;
@@ -876,9 +881,10 @@ static void autotune_save_tuning_gains()
             if (tune_yaw_rp != 0) {
                 // rate yaw gains
                 g.pid_rate_yaw.kP(tune_yaw_rp);
-                g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_PI_RATIO_FINAL);
-                g.pid_rate_yaw.kD(tune_yaw_rd);
+                g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
                 g.pid_rate_yaw.save_gains();
+                attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
+                attitude_control.save_rate_yaw_filt();
                 // stabilize yaw
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
                 g.p_stabilize_yaw.save_gains();
@@ -886,7 +892,7 @@ static void autotune_save_tuning_gains()
                 // resave pids to originals in case the autotune is run again
                 orig_yaw_rp = g.pid_rate_yaw.kP();
                 orig_yaw_ri = g.pid_rate_yaw.kI();
-                orig_yaw_rd = g.pid_rate_yaw.kD();
+                orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
                 orig_yaw_sp = g.p_stabilize_yaw.kP();
             } else {
                 failed = true;
