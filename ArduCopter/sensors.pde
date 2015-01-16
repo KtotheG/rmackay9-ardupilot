@@ -150,9 +150,11 @@ static void read_battery(void)
         compass.set_current(battery.current_amps());
     }
 
-    // update motors with voltage
-    if (battery.monitoring() == AP_BATT_MONITOR_VOLTAGE_ONLY || battery.monitoring() == AP_BATT_MONITOR_VOLTAGE_AND_CURRENT) {
+    // update motors with voltage and current
+    if (battery.get_type() != AP_BattMonitor::BattMonitor_TYPE_NONE) {
         motors.set_voltage(battery.voltage());
+    }
+    if (battery.has_current()) {
         motors.set_current(battery.current_amps());
     }
 
