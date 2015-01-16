@@ -197,8 +197,12 @@ static void tuning() {
         g.pid_rate_roll.kD(tuning_value);
         break;
 
-    case CH6_RATE_MAT_YAW_MIN:
-        motors.set_yaw_min(tuning_value*1000);
-        break;
+    case CH6_MOT_YAW_MIN:
+         motors.set_yaw_min(tuning_value*1000);
+         break;
+
+     case CH6_RATE_YAW_FILT:
+         attitude_control.set_rate_yaw_filt(tuning_value);
+         break;
     }
 }
