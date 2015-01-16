@@ -37,9 +37,8 @@ const AP_HAL::HAL& hal = AP_HAL_BOARD_DRIVER;
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
 static ToshibaLED_PX4 toshiba_led;
 #else
-//static ToshibaLED_I2C toshiba_led;
-static OreoLED_I2C toshiba_led;
-//static OreoLED_PX4 toshiba_led;
+static ToshibaLED_I2C toshiba_led;
+static OreoLED_I2C oreo_led;
 #endif
 
 static uint8_t red, green, blue;
@@ -49,12 +48,20 @@ void setup(void)
     // display welcome message
     hal.console->print_P(PSTR("Toshiba LED test ver 0.1\n"));
 
-    // initialise LED
+    // initialise Toshiba LED
     toshiba_led.init();
-
-    // check if healthy
-    if (!toshiba_led.healthy()) {
+    if (toshiba_led.healthy()) {
+        hal.console->print_P(PSTR("Initialised Toshiba LED\n"));
+    } else {
         hal.console->print_P(PSTR("Failed to initialise Toshiba LED\n"));
+    }
+
+    // initialise oreo LED
+    oreo_led.init();
+    if (oreo_led.healthy()) {
+        hal.console->print_P(PSTR("Initialised Oreo LED\n"));
+    } else {
+        hal.console->print_P(PSTR("Failed to initialise Oreo LED\n"));
     }
 
     // turn on initialising notification
@@ -78,6 +85,7 @@ void loop(void)
 
     // update the toshiba led
     toshiba_led.update();
+    oreo_led.update();
 
     // wait 1/50th of a second
     hal.scheduler->delay(20);
