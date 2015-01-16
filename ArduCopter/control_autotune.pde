@@ -593,6 +593,9 @@ static void autotune_attitude_control()
                     autotune_state.mode = AUTOTUNE_MODE_SUCCESS;
                     autotune_update_gcs(AUTOTUNE_MESSAGE_SUCCESS);
                     Log_Write_Event(DATA_AUTOTUNE_SUCCESS);
+                    AP_Notify::events.autotune_complete = 1;
+                } else {
+                    AP_Notify::events.autotune_next_axis = 1;
                 }
                 break;
             }
