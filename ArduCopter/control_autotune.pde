@@ -317,8 +317,8 @@ static void autotune_run()
 // autotune_attitude_controller - sets attitude control targets during tuning
 static void autotune_attitude_control()
 {
-    float rotation_rate;        // rotation rate in radians/second
-    int32_t lean_angle;
+    float rotation_rate = 0.0f;        // rotation rate in radians/second
+    int32_t lean_angle = 0;
     const float direction_sign = autotune_state.positive_direction ? 1.0 : -1.0;
     const float target_rate = (autotune_state.axis == AUTOTUNE_AXIS_YAW)
         ? AUTOTUNE_TARGET_RATE_YAW_CDS
@@ -832,9 +832,6 @@ static void autotune_save_tuning_gains()
     // if we successfully completed tuning
     if (autotune_state.mode == AUTOTUNE_MODE_SUCCESS) {
         // sanity check the rate P values
-        bool failed = false;
-        bool save_error = false;
-
         if (autotune_roll_enabled()) {
             if (tune_roll_rp != 0) {
                 // rate roll gains
@@ -851,8 +848,6 @@ static void autotune_save_tuning_gains()
                 orig_roll_ri = g.pid_rate_roll.kI();
                 orig_roll_rd = g.pid_rate_roll.kD();
                 orig_roll_sp = g.p_stabilize_roll.kP();
-            } else {
-                failed = true;
             }
         }
 
@@ -872,8 +867,6 @@ static void autotune_save_tuning_gains()
                 orig_pitch_ri = g.pid_rate_pitch.kI();
                 orig_pitch_rd = g.pid_rate_pitch.kD();
                 orig_pitch_sp = g.p_stabilize_pitch.kP();
-            } else {
-                failed = true;
             }
         }
 
@@ -894,8 +887,6 @@ static void autotune_save_tuning_gains()
                 orig_yaw_ri = g.pid_rate_yaw.kI();
                 orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
                 orig_yaw_sp = g.p_stabilize_yaw.kP();
-            } else {
-                failed = true;
             }
         }
         // log save gains event
