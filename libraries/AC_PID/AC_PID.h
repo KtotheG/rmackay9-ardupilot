@@ -115,6 +115,7 @@ public:
     void        imax(const int16_t v) { _imax.set(abs(v)); }
     float       get_integrator() const { return _integrator; }
     void        set_integrator(float i) { _integrator = i; }
+    float       get_alpha() const { return _d_lpf_alpha; }
 
     static const struct AP_Param::GroupInfo        var_info[];
 
