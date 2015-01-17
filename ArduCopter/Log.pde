@@ -361,11 +361,37 @@ static void Log_Write_Cmd(const AP_Mission::Mission_Command &cmd)
 }
 
 
+struct PACKED log_Rate {
+    LOG_PACKET_HEADER;
+    uint32_t time_ms;
+    int16_t  control_roll;
+    int16_t  roll;
+    int16_t  control_pitch;
+    int16_t  pitch;
+    uint16_t control_yaw;
+    uint16_t yaw;
+    uint16_t error_rp;
+    uint16_t error_yaw;
+};
+
 // Write an attitude packet
 static void Log_Write_Attitude()
 {
     Vector3f targets = attitude_control.angle_ef_targets();
     DataFlash.Log_Write_Attitude(ahrs, targets);
+
+    const Vector3f &rate_targets = attitude_control.rate_bf_targets();
+    struct log_Rate pkt_rate = {
+        LOG_PACKET_HEADER_INIT(LOG_RATE_MSG),
+        time_ms         : hal.scheduler->millis(),
+        control_roll    : (int16_t)rate_targets.x,
+        roll            : (int16_t)(ahrs.get_gyro().x * AC_ATTITUDE_CONTROL_DEGX100),
+        control_pitch   : (int16_t)rate_targets.y,
+        pitch           : (int16_t)(ahrs.get_gyro().y * AC_ATTITUDE_CONTROL_DEGX100),
+        control_yaw     : (uint16_t)rate_targets.z,
+        yaw             : (uint16_t)(ahrs.get_gyro().z * AC_ATTITUDE_CONTROL_DEGX100)
+    };
+    DataFlash.WriteBlock(&pkt_rate, sizeof(pkt_rate));
 
 #if AP_AHRS_NAVEKF_AVAILABLE
  #if OPTFLOW == ENABLED
@@ -543,6 +569,8 @@ static const struct LogStructure log_structure[] PROGMEM = {
       "CTUN", "Ihhhffecchh", "TimeMS,ThrIn,AngBst,ThrOut,DAlt,Alt,BarAlt,DSAlt,SAlt,DCRt,CRt" },
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
       "PM",  "HHIhBHB",    "NLon,NLoop,MaxT,PMT,I2CErr,INSErr,INAVErr" },
+    { LOG_RATE_MSG, sizeof(log_Rate),
+      "RAT", "IccccCC",    "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
       "STRT", "",            "" },
     { LOG_EVENT_MSG, sizeof(log_Event),         
