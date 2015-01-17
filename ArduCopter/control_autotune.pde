@@ -64,6 +64,7 @@
 #define AUTOTUNE_RP_MIN                   0.01f    // minimum Rate P value
 #define AUTOTUNE_RP_MAX                    100.0f    // maximum Rate P value
 #define AUTOTUNE_SP_MAX                   20.0f    // maximum Stab P value
+#define AUTOTUNE_SP_MIN                   1.0f    // maximum Stab P value
 #define AUTOTUNE_SUCCESS_COUNT                4    // how many successful iterations we need to freeze at current gains
 
 // roll and pitch axes
@@ -107,7 +108,8 @@ enum AutoTuneTuneType {
     AUTOTUNE_TYPE_RD_UP = 0,                // rate D is being tuned up
     AUTOTUNE_TYPE_RD_DOWN = 1,              // rate D is being tuned down
     AUTOTUNE_TYPE_RP_UP = 2,                // rate P is being tuned up
-    AUTOTUNE_TYPE_SP_UP = 3                 // angle P is being tuned up
+    AUTOTUNE_TYPE_SP_DOWN = 3,                 // angle P is being tuned up
+    AUTOTUNE_TYPE_SP_UP = 4                 // angle P is being tuned up
 };
 
 // autotune_state_struct - hold state flags
@@ -117,7 +119,7 @@ struct autotune_state_struct {
     AutoTuneAxisType    axis                : 2;    // see AutoTuneAxisType for which things can be tuned
     uint8_t             positive_direction  : 1;    // 0 = tuning in negative direction (i.e. left for roll), 1 = positive direction (i.e. right for roll)
     AutoTuneStepType    step                : 2;    // see AutoTuneStepType for what steps are performed
-    AutoTuneTuneType    tune_type           : 2;    // see AutoTuneTuneType
+    AutoTuneTuneType    tune_type           : 3;    // see AutoTuneTuneType
 } autotune_state;
 
 // variables
@@ -319,13 +321,23 @@ static void autotune_attitude_control()
 {
     float rotation_rate = 0.0f;        // rotation rate in radians/second
     int32_t lean_angle = 0;
+    float target_rate, target_angle;
     const float direction_sign = autotune_state.positive_direction ? 1.0 : -1.0;
-    const float target_rate = (autotune_state.axis == AUTOTUNE_AXIS_YAW)
-        ? AUTOTUNE_TARGET_RATE_YAW_CDS
-        : AUTOTUNE_TARGET_RATE_RLLPIT_CDS;
-    const float target_angle = (autotune_state.axis == AUTOTUNE_AXIS_YAW)
-        ? AUTOTUNE_TARGET_ANGLE_YAW_CD
-        : AUTOTUNE_TARGET_ANGLE_RLLPIT_CD;
+
+    switch (autotune_state.axis) {
+    case AUTOTUNE_AXIS_ROLL:
+        target_rate = AUTOTUNE_TARGET_RATE_RLLPIT_CDS;
+        target_angle = AUTOTUNE_TARGET_ANGLE_RLLPIT_CD;
+        break;
+    case AUTOTUNE_AXIS_PITCH:
+        target_rate = AUTOTUNE_TARGET_RATE_RLLPIT_CDS;
+        target_angle = AUTOTUNE_TARGET_ANGLE_RLLPIT_CD;
+        break;
+    case AUTOTUNE_AXIS_YAW:
+        target_rate = AUTOTUNE_TARGET_RATE_YAW_CDS;
+        target_angle = AUTOTUNE_TARGET_ANGLE_YAW_CD;
+        break;
+    }
 
     // check tuning step
     switch (autotune_state.step) {
@@ -365,7 +377,7 @@ static void autotune_attitude_control()
         // disable rate limits
         attitude_control.limit_angle_to_rate_request(false);
 
-        if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
+        if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
             // Testing increasing stabilize P gain so will set lean angle target
             switch (autotune_state.axis) {
             case AUTOTUNE_AXIS_ROLL:
@@ -421,7 +433,7 @@ static void autotune_attitude_control()
         // log this iterations lean angle and rotation rate
         Log_Write_AutoTuneDetails((int16_t)lean_angle, rotation_rate);
 
-        if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
+        if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
             autotune_twitching_measure(lean_angle, autotune_test_min, autotune_test_max);
             autotune_twitching_test_p(target_angle, autotune_test_max);
         } else {
@@ -497,6 +509,20 @@ static void autotune_attitude_control()
             }
             break;
         // Check results after mini-step to increase stabilize P gain
+        case AUTOTUNE_TYPE_SP_DOWN:
+            switch (autotune_state.axis) {
+            case AUTOTUNE_AXIS_ROLL:
+                autotune_updating_p_down(tune_roll_sp, AUTOTUNE_SP_MIN, AUTOTUNE_SP_STEP, target_angle, autotune_test_max);
+                break;
+            case AUTOTUNE_AXIS_PITCH:
+                autotune_updating_p_down(tune_pitch_sp, AUTOTUNE_SP_MIN, AUTOTUNE_SP_STEP, target_angle, autotune_test_max);
+                break;
+            case AUTOTUNE_AXIS_YAW:
+                autotune_updating_p_down(tune_yaw_sp, AUTOTUNE_SP_MIN, AUTOTUNE_SP_STEP, target_angle, autotune_test_max);
+                break;
+            }
+            break;
+        // Check results after mini-step to increase stabilize P gain
         case AUTOTUNE_TYPE_SP_UP:
             switch (autotune_state.axis) {
             case AUTOTUNE_AXIS_ROLL:
@@ -542,13 +568,20 @@ static void autotune_attitude_control()
                 break;
             case AUTOTUNE_TYPE_RP_UP:
                 autotune_state.tune_type++;
-                if (autotune_state.axis == AUTOTUNE_AXIS_ROLL) {
-                    tune_roll_sp = tune_roll_sp * AUTOTUNE_SP_BACKOFF;
-                }else if (autotune_state.axis == AUTOTUNE_AXIS_PITCH) {
-                    tune_pitch_sp = tune_pitch_sp * AUTOTUNE_SP_BACKOFF;
-                }else{
-                    tune_yaw_sp = tune_yaw_sp * AUTOTUNE_SP_BACKOFF;
+                switch (autotune_state.axis) {
+                case AUTOTUNE_AXIS_ROLL:
+                    tune_roll_rp = tune_roll_rp * AUTOTUNE_RP_BACKOFF;
+                    break;
+                case AUTOTUNE_AXIS_PITCH:
+                    tune_pitch_rp = tune_pitch_rp * AUTOTUNE_RP_BACKOFF;
+                    break;
+                case AUTOTUNE_AXIS_YAW:
+                    tune_yaw_rp = tune_yaw_rp * AUTOTUNE_RP_BACKOFF;
+                    break;
                 }
+                break;
+            case AUTOTUNE_TYPE_SP_DOWN:
+                autotune_state.tune_type++;
                 break;
             case AUTOTUNE_TYPE_SP_UP:
                 // we've reached the end of a D-up-down PI-up-down tune type cycle
@@ -1063,29 +1096,6 @@ void autotune_updating_d_down(float &tune_d, float tune_d_min, float tune_d_step
     }
 }
 
-void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_ratio, float target, float max_measurement)
-{
-    // Check results after mini-step to increase rate P gain
-    // if max rotation rate greater than target, this is a good tune
-    if (max_measurement > target) {
-        // added to reduce the time taken to tune without loosing accuracy
-        autotune_counter++;
-    }else{
-        // rotation rate was too low so reduce number of good tunes
-        if (autotune_counter > 0 ) {
-            autotune_counter--;
-        }
-        // increase rate P and I gains
-        tune_p += tune_p*tune_p_step_ratio;
-        // stop tuning if we hit max P
-        if (tune_p >= tune_p_max) {
-            tune_p = tune_p_max;
-            autotune_counter = AUTOTUNE_SUCCESS_COUNT;
-            Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
-        }
-    }
-}
-
 void autotune_updating_p_down(float &tune_p, float tune_p_min, float tune_p_step_ratio, float target, float max_measurement)
 {
     // Check results after mini-step to increase rate P gain
@@ -1103,6 +1113,29 @@ void autotune_updating_p_down(float &tune_p, float tune_p_min, float tune_p_step
         // stop tuning if we hit max P
         if (tune_p <= tune_p_min) {
             tune_p = tune_p_min;
+            autotune_counter = AUTOTUNE_SUCCESS_COUNT;
+            Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
+        }
+    }
+}
+
+void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_ratio, float target, float max_measurement)
+{
+    // Check results after mini-step to increase rate P gain
+    // if max rotation rate greater than target, this is a good tune
+    if (max_measurement > target) {
+        // added to reduce the time taken to tune without loosing accuracy
+        autotune_counter++;
+    }else{
+        // rotation rate was too low so reduce number of good tunes
+        if (autotune_counter > 0 ) {
+            autotune_counter--;
+        }
+        // increase rate P and I gains
+        tune_p += tune_p*tune_p_step_ratio;
+        // stop tuning if we hit max P
+        if (tune_p >= tune_p_max) {
+            tune_p = tune_p_max;
             autotune_counter = AUTOTUNE_SUCCESS_COUNT;
             Log_Write_Event(DATA_AUTOTUNE_REACHED_LIMIT);
         }
