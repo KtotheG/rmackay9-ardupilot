@@ -111,6 +111,13 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @User: Standard
     AP_GROUPINFO("MAT_YAW_MIN", 11, AP_Motors, _matrix_yaw_min, AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM),
 
+    // @Param: THST_MAX
+    // @DisplayName: bla
+    // @Description: Point at which the thrust saturates
+    // @Values: 0.9: Low, 1.0: High
+    // @User: Standard
+    AP_GROUPINFO("THST_CUR_MX", 12, AP_Motors, _batt_current_max, AP_MOTORS_CUR_MX),
+
     AP_GROUPEND
 };
 

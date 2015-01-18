@@ -59,6 +59,7 @@
 #define AP_MOTORS_THST_MAX          0.95f // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
 #define AP_MOTORS_BAT_MX            0.0f
 #define AP_MOTORS_BAT_MN            0.0f
+#define AP_MOTORS_CUR_MX            0.0f
 #define AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM    500
 
 // bit mask for recording which limits we have reached when outputting to motors
@@ -195,6 +196,8 @@ protected:
     AP_Int8             _throttle_curve_mid;    // throttle which produces 1/2 the maximum thrust.  expressed as a percentage (i.e. 0 ~ 100 ) of the full throttle range
     AP_Int8             _throttle_curve_max;    // throttle which produces the maximum thrust.  expressed as a percentage (i.e. 0 ~ 100 ) of the full throttle range
     AP_Int16            _spin_when_armed;       // used to control whether the motors always spin when armed.  pwm value above radio_min
+    AP_Float            _batt_current_max;      // current over which maximum throttle is limited
+    AP_Float            _throttle_limit;        // last battery voltage
     AP_Float            _throttle_low_comp;     // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
     AP_Float            _thrust_expo;           // set to 0 for linear and 1 for second order approximation
     AP_Float            _thrust_curve_max;      // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
