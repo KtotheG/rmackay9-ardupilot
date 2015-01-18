@@ -370,10 +370,8 @@ struct PACKED log_Rate {
     int16_t  roll;
     int16_t  control_pitch;
     int16_t  pitch;
-    uint16_t control_yaw;
-    uint16_t yaw;
-    uint16_t error_rp;
-    uint16_t error_yaw;
+    int16_t  control_yaw;
+    int16_t  yaw;
 };
 
 // Write an attitude packet
@@ -572,7 +570,7 @@ static const struct LogStructure log_structure[] PROGMEM = {
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
       "PM",  "HHIhBHB",    "NLon,NLoop,MaxT,PMT,I2CErr,INSErr,INAVErr" },
     { LOG_RATE_MSG, sizeof(log_Rate),
-      "RAT", "IccccCC",    "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
+      "RATE", "Icccccc",    "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
       "STRT", "",            "" },
     { LOG_EVENT_MSG, sizeof(log_Event),         
