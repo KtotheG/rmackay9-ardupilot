@@ -55,7 +55,7 @@
 #define AUTOTUNE_RP_BACKOFF               1.0f     // Rate P gains are reduced to 97.5% of their maximum value discovered during tuning
 #define AUTOTUNE_SP_BACKOFF               1.0f     // Stab P gains are reduced to 60% of their maximum value discovered during tuning
 #define AUTOTUNE_PI_RATIO_FOR_TESTING      0.1f    // I is set 10x smaller than P during testing
-#define AUTOTUNE_PI_RATIO_FINAL            1.0f   // I is set 1x P after testing
+#define AUTOTUNE_PI_RATIO_FINAL            2.5f   // I is set 1x P after testing
 #define AUTOTUNE_YAW_PI_RATIO_FINAL        0.1f   // I is set 1x P after testing
 #define AUTOTUNE_RD_MIN                  0.002f    // minimum Rate D value
 #define AUTOTUNE_RD_MAX                  0.050f    // maximum Rate D value
@@ -785,7 +785,7 @@ static void autotune_load_tuned_gains()
     if (autotune_yaw_enabled()) {
         if (tune_yaw_rp != 0) {
             g.pid_rate_yaw.kP(tune_yaw_rp);
-            g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_PI_RATIO_FINAL);
+            g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
             attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
             g.p_stabilize_yaw.kP(tune_yaw_sp);
         } else {
