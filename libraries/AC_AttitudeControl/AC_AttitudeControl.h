@@ -251,7 +251,12 @@ protected:
     AP_Float            _slew_yaw;              // maximum rate the yaw target can be updated in Loiter, RTL, Auto flight modes
     AP_Float            _accel_rp_max;          // maximum rotation acceleration for earth-frame roll and pitch axis
     AP_Float            _accel_y_max;           // maximum rotation acceleration for earth-frame yaw axis
+    AP_Float            _accel_roll_max;          // maximum rotation acceleration for earth-frame roll axis
+    AP_Float            _accel_pitch_max;          // maximum rotation acceleration for earth-frame pitch axis
+    AP_Float            _accel_yaw_max;           // maximum rotation acceleration for earth-frame yaw axis
     AP_Int8             _rate_bf_ff_enabled;    // Enable/Disable body frame rate feed forward
+    AP_Float            _rate_roll_filt;        // filter frequency of the roll pid filter in Hz
+    AP_Float            _rate_pitch_filt;       // filter frequency of the pitch pid filter in Hz
     AP_Float            _rate_yaw_filt;         // filter frequency of the yaw pid filter in Hz
 
     // internal variables
