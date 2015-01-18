@@ -168,7 +168,7 @@ void AP_Motors::set_mid_throttle(uint16_t mid_throttle)
     _hover_out = _rc_throttle.radio_min + (float)(_rc_throttle.radio_max - _rc_throttle.radio_min) * mid_throttle / 1000.0f;
 }
 
-// throttle_pass_through - passes provided pwm directly to all motors - dangerous but used for initialising ESCs
+// throttle_pass_through - passes provided pwm directly to all motors - dangerous but used for initializing ESCs
 //  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
 void AP_Motors::throttle_pass_through(int16_t pwm)
 {
@@ -196,7 +196,7 @@ void AP_Motors::output()
     }
 };
 
-// setup_throttle_curve - used to linearlise thrust output by motors
+// setup_throttle_curve - used to linearise thrust output by motors
 // returns true if set up successfully
 bool AP_Motors::setup_throttle_curve()
 {
@@ -212,7 +212,7 @@ bool AP_Motors::setup_throttle_curve()
         // clear curve
         _throttle_curve.clear();
 
-        // curve initialisation
+        // curve initialization
         retval &= _throttle_curve.add_point(min_pwm, min_pwm);
         retval &= _throttle_curve.add_point(min_pwm+_min_throttle, min_pwm+_min_throttle);
         retval &= _throttle_curve.add_point(mid_throttle_pwm, mid_thrust_pwm);
@@ -224,7 +224,7 @@ bool AP_Motors::setup_throttle_curve()
         retval = false;
     }
 
-    // disable throttle curve if not set-up corrrectly
+    // disable throttle curve if not set-up correctly
     if( !retval ) {
         _throttle_curve_enabled = false;
         hal.console->println_P(PSTR("AP_Motors: failed to create throttle curve"));
@@ -240,7 +240,7 @@ void AP_Motors::slow_start(bool true_false)
     // set slow_start flag
     _flags.slow_start = true;
 
-    // initialise maximum throttle to current throttle
+    // Initialize maximum throttle to current throttle
     _max_throttle = constrain_int16(_rc_throttle.servo_out, 0, AP_MOTORS_DEFAULT_MAX_THROTTLE);
 }
 

@@ -166,10 +166,11 @@ void AP_MotorsMatrix::output_armed()
         float batt_voltage = _batt_voltage + _batt_current * _batt_resistance;
         batt_voltage = constrain_float(batt_voltage, _batt_voltage_min, _batt_voltage_max);
         // filter at 0.5 Hz
-        _batt_rem = _batt_rem  + 0.007792f*(batt_voltage/_batt_voltage_max-_batt_rem);         // ratio of current battery voltage to maximum battery voltage
-        _lift_max = _batt_rem*(1-_thrust_expo) + _thrust_expo*_batt_rem*_batt_rem;
+        // todo: replace with filter object
+        _batt_voltage_filt = _batt_voltage_filt  + 0.007792f*(batt_voltage/_batt_voltage_max-_batt_voltage_filt);         // ratio of current battery voltage to maximum battery voltage
+        _lift_max = _batt_voltage_filt*(1-_thrust_expo) + _thrust_expo*_batt_voltage_filt*_batt_voltage_filt;
     } else {
-        _batt_rem = 1;
+        _batt_voltage_filt = 1;
         _lift_max = 1;
     }
 
@@ -305,7 +306,7 @@ void AP_MotorsMatrix::output_armed()
         // check everything fits
         thr_adj = throttle_radio_out - out_best_thr_pwm;
 
-        // calc upper and lower limits of thr_adj
+        // calculate upper and lower limits of thr_adj
         int16_t thr_adj_max = max(out_max_pwm-(out_best_thr_pwm+rpy_high),0);
 
         // if we are increasing the throttle (situation #2 above)..
@@ -333,7 +334,7 @@ void AP_MotorsMatrix::output_armed()
         }
 
         // do we need to reduce roll, pitch, yaw command
-        // earlier code does not allow both limit's to be passed simultainiously with abs(_yaw_factor)<1
+        // earlier code does not allow both limit's to be passed simultaneously with abs(_yaw_factor)<1
         if ((rpy_low+out_best_thr_pwm)+thr_adj < out_min_pwm){
             rpy_scale = (float)(out_min_pwm-thr_adj-out_best_thr_pwm)/rpy_low;
             // we haven't even been able to apply full roll, pitch and minimal yaw without scaling
@@ -359,9 +360,8 @@ void AP_MotorsMatrix::output_armed()
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
                     temp_out = ((float)(motor_out[i]-out_min_pwm))/((float)(out_max_pwm-out_min_pwm));
-
                     if (_thrust_expo > 0.0f){
-                        temp_out = ((_thrust_expo-1.0f) + safe_sqrt((1.0f-_thrust_expo)*(1.0f-_thrust_expo) + 4.0f*_thrust_expo*_lift_max*temp_out))/(2.0f*_thrust_expo*_batt_rem);
+                        temp_out = ((_thrust_expo-1.0f) + safe_sqrt((1.0f-_thrust_expo)*(1.0f-_thrust_expo) + 4.0f*_thrust_expo*_lift_max*temp_out))/(2.0f*_thrust_expo*_batt_voltage_filt);
                     }
                     motor_out[i] = temp_out*(_thrust_curve_max*out_max_pwm-out_min_pwm)+out_min_pwm;
                 }
