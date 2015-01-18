@@ -91,29 +91,29 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     AP_GROUPINFO("ACCEL_Y_MAX",  8, AC_AttitudeControl, _accel_yaw_max, AC_ATTITUDE_CONTROL_ACCEL_Y_MAX_DEFAULT),
 
     // @Param: RATE_R_FLT
-    // @DisplayName: Yaw PID filter
-    // @Description: Yaw PID filter
+    // @DisplayName: Roll PID filter frequency
+    // @Description: Roll PID filter frequency
     // @Units: Hz
-    // @Range: 0.01 10
-    // @Increment: 0.001
+    // @Range: 1.0 10.0
+    // @Increment: 0.1
     // @User: Advanced
     AP_GROUPINFO("RATE_R_FLT",  9, AC_AttitudeControl, _rate_roll_filt, AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER),
 
     // @Param: RATE_P_FLT
-    // @DisplayName: Yaw PID filter
-    // @Description: Yaw PID filter
+    // @DisplayName: Pitch PID filter frequency
+    // @Description: Pitch PID filter frequency
     // @Units: Hz
-    // @Range: 0.01 10
-    // @Increment: 0.001
+    // @Range: 1.0 10.0
+    // @Increment: 0.1
     // @User: Advanced
     AP_GROUPINFO("RATE_P_FLT",  10, AC_AttitudeControl, _rate_pitch_filt, AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER),
 
     // @Param: RATE_Y_FLT
-    // @DisplayName: Yaw PID filter
-    // @Description: Yaw PID filter
+    // @DisplayName: Yaw PID filter frequency
+    // @Description: Yaw PID filter frequency
     // @Units: Hz
-    // @Range: 0.01 10
-    // @Increment: 0.001
+    // @Range: 1.0 10.0
+    // @Increment: 0.1
     // @User: Advanced
     AP_GROUPINFO("RATE_Y_FLT",  11, AC_AttitudeControl, _rate_yaw_filt, AC_ATTITUDE_CONTROL_RATE_YAW_FILT_DEFAULT),
 
