@@ -97,7 +97,7 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @Range: 1.0 10.0
     // @Increment: 0.1
     // @User: Advanced
-    AP_GROUPINFO("RATE_R_FLT",  9, AC_AttitudeControl, _rate_roll_filt, AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER),
+    AP_GROUPINFO("RATE_R_FLT",  9, AC_AttitudeControl, _rate_roll_filt, AC_ATTITUDE_RATE_RP_PID_FILTER),
 
     // @Param: RATE_P_FLT
     // @DisplayName: Pitch PID filter frequency
@@ -106,7 +106,7 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @Range: 1.0 10.0
     // @Increment: 0.1
     // @User: Advanced
-    AP_GROUPINFO("RATE_P_FLT",  10, AC_AttitudeControl, _rate_pitch_filt, AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER),
+    AP_GROUPINFO("RATE_P_FLT",  10, AC_AttitudeControl, _rate_pitch_filt, AC_ATTITUDE_RATE_RP_PID_FILTER),
 
     // @Param: RATE_Y_FLT
     // @DisplayName: Yaw PID filter frequency
@@ -115,7 +115,7 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @Range: 1.0 10.0
     // @Increment: 0.1
     // @User: Advanced
-    AP_GROUPINFO("RATE_Y_FLT",  11, AC_AttitudeControl, _rate_yaw_filt, AC_ATTITUDE_CONTROL_RATE_YAW_FILT_DEFAULT),
+    AP_GROUPINFO("RATE_Y_FLT",  11, AC_AttitudeControl, _rate_yaw_filt, AC_ATTITUDE_RATE_Y_PID_FILTER),
 
 
     AP_GROUPEND
@@ -128,15 +128,6 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
 void AC_AttitudeControl::set_dt(float delta_sec)
 {
     _dt = delta_sec;
-
-    // get filter from ahrs
-    const AP_InertialSensor &ins = _ahrs.get_ins();
-    float ins_filter = (float)ins.get_filter();
-
-    // sanity check filter
-    if (ins_filter <= 0.0f) {
-        ins_filter = AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER;
-    }
 
     // set attitude controller's D term filters
     _pid_rate_roll.set_d_lpf_alpha(_rate_roll_filt, _dt);
@@ -219,9 +210,9 @@ void AC_AttitudeControl::angle_ef_roll_pitch_rate_ef_yaw_smooth(float roll_angle
 
     if (_accel_yaw_max > 0.0f) {
         // set earth-frame feed forward rate for yaw
-        float rate_change_limit = _accel_yaw_max * _dt;
+        rate_change_limit = _accel_yaw_max * _dt;
 
-        // update yaw rate target with accele
+        // update yaw rate target with acceleration limit
         _rate_ef_desired.z += constrain_float(yaw_rate_ef - _rate_ef_desired.z, -rate_change_limit, rate_change_limit);
 
         // calculate yaw target angle and angle error

@@ -37,12 +37,10 @@
 #define AC_ATTITUDE_100HZ_DT                            0.0100f // delta time in seconds for 100hz update rate
 #define AC_ATTITUDE_400HZ_DT                            0.0025f // delta time in seconds for 400hz update rate
 
-#define AC_ATTITUDE_RATE_RP_PID_DTERM_FILTER            20      // D-term filter rate cutoff frequency for Roll and Pitch rate controllers
-#define AC_ATTITUDE_RATE_Y_PID_DTERM_FILTER             5       // D-term filter rate cutoff frequency for Yaw rate controller
+#define AC_ATTITUDE_RATE_RP_PID_FILTER                  20.0f   // D-term filter rate cutoff frequency for Roll and Pitch rate controllers
+#define AC_ATTITUDE_RATE_Y_PID_FILTER                   5.0f    // D-term filter rate cutoff frequency for Yaw rate controller
 
 #define AC_ATTITUDE_CONTROL_RATE_BF_FF_DEFAULT          0       // body-frame rate feedforward enabled by default
-
-#define AC_ATTITUDE_CONTROL_RATE_YAW_FILT_DEFAULT       1.0f    // yaw pid filter in Hz
 
 class AC_AttitudeControl {
 public:
