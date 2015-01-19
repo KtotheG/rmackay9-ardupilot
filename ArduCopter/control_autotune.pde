@@ -47,7 +47,6 @@
 #define AUTOTUNE_TESTING_STEP_TIMEOUT_MS    500     // timeout for tuning mode's testing step
 #define AUTOTUNE_LEVEL_ANGLE_CD             300     // angle which qualifies as level
 #define AUTOTUNE_REQUIRED_LEVEL_TIME_MS     250     // time we require the copter to be level
-#define AUTOTUNE_AGGRESSIVENESS           0.05f     // tuning for 10% overshoot
 #define AUTOTUNE_RD_STEP                  0.05f     // minimum increment when increasing/decreasing Rate D term
 #define AUTOTUNE_RP_STEP                  0.05f     // minimum increment when increasing/decreasing Rate P term
 #define AUTOTUNE_SP_STEP                  0.05f     // minimum increment when increasing/decreasing Stab P term
@@ -1035,7 +1034,7 @@ void autotune_twitching_test_d(float target, float measurement_min, float measur
     }
 
     // if "bounce back rate" if greater than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-    if (measurement_max-measurement_min > measurement_max*AUTOTUNE_AGGRESSIVENESS && measurement_max > target/2.0f) {
+    if (measurement_max-measurement_min > measurement_max*g.autotune_aggressiveness && measurement_max > target/2.0f) {
         autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
     }
 
@@ -1065,11 +1064,11 @@ void autotune_updating_d_up(float &tune_d, float tune_d_min, float tune_d_max, f
             }
         }
     // if maximum rotation rate was less than 80% of requested rate increase rate P
-    }else if(measurement_max < target*(1.0f-AUTOTUNE_AGGRESSIVENESS*2.0f) && tune_p <= tune_p_max ) {
+    }else if(measurement_max < target*(1.0f-g.autotune_aggressiveness*2.0f) && tune_p <= tune_p_max ) {
         tune_p += tune_p*tune_p_step_ratio*2.0f;
     }else{
         // if "bounce back rate" if greater than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-        if (measurement_max-measurement_min > measurement_max*AUTOTUNE_AGGRESSIVENESS) {
+        if (measurement_max-measurement_min > measurement_max*g.autotune_aggressiveness) {
             autotune_counter++;
             //cancel change in direction
             autotune_state.positive_direction = !autotune_state.positive_direction;
@@ -1097,11 +1096,11 @@ void autotune_updating_d_down(float &tune_d, float tune_d_min, float tune_d_step
         // if max rotation rate was higher than target, reduce rate P
         tune_p -= tune_p*tune_p_step_ratio;
     // if maximum measurement was less than 80% of requested measurement, noise is bigger than bounce
-    }else if(measurement_max < target*(1-AUTOTUNE_AGGRESSIVENESS*2.0f)) {
+    }else if(measurement_max < target*(1-g.autotune_aggressiveness*2.0f)) {
         autotune_counter++;
     }else{
         // if "bounce back rate" if less than 10% of requested rate (i.e. >9deg/sec) this is a good tune
-        if (measurement_max-measurement_min < measurement_max*(AUTOTUNE_AGGRESSIVENESS*0.5)) {
+        if (measurement_max-measurement_min < measurement_max*(g.autotune_aggressiveness*0.5)) {
             autotune_counter++;
         }else{
             //cancel change in direction
