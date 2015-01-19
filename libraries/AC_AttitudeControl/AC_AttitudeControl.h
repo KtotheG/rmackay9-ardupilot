@@ -81,14 +81,23 @@ public:
     // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
     void set_dt(float delta_sec);
 
-    // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    // set_rate_yaw_filt - sets the cut off frequency of the yaw pid filter
     void set_rate_yaw_filt(float rate_yaw_filt);
 
-    // get_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    // get_rate_yaw_filt - gets the cut off frequency of the yaw pid filter
     float get_rate_yaw_filt() const { return _rate_yaw_filt; }
 
-    // get_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    // save_rate_yaw_filt - saves the cut off frequency of the yaw pid filter
     void save_rate_yaw_filt() { _rate_yaw_filt.save(); }
+
+    // save_accel_roll_max - sets and saves the roll acceleration limit
+    void save_accel_roll_max(float accel_roll_max) { _accel_roll_max = accel_roll_max; _accel_roll_max.save(); }
+
+    // save_accel_pitch_max - sets and saves the pitch acceleration limit
+    void save_accel_pitch_max(float accel_pitch_max) { _accel_pitch_max = accel_pitch_max; _accel_pitch_max.save(); }
+
+    // save_accel_yaw_max - sets and saves the yaw acceleration limit
+    void save_accel_yaw_max(float accel_yaw_max) { _accel_yaw_max = accel_yaw_max; _accel_yaw_max.save(); }
 
     // relax_bf_rate_controller - ensure body-frame rate controller has zero errors to relax rate controller output
     void relax_bf_rate_controller();
