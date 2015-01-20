@@ -51,7 +51,7 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @Values: 0:Disabled, 18000:Slow, 36000:Medium, 54000:Fast
     // @Increment: 1000
     // @User: Advanced
-    AP_GROUPINFO("ACCEL_Y_MAX",  4, AC_AttitudeControl, _accel_y_max, AC_ATTITUDE_CONTROL_ACCEL_Y_MAX_DEFAULT),
+    AP_GROUPINFO("ACCEL_Y_MX",  4, AC_AttitudeControl, _accel_y_max, AC_ATTITUDE_CONTROL_ACCEL_Y_MAX_DEFAULT),
 
     // @Param: RATE_FF_ENAB
     // @DisplayName: Rate Feedforward Enable
