@@ -134,12 +134,12 @@ static uint32_t autotune_step_start_time;                               // start
 static uint32_t autotune_step_stop_time;                                // start time of current tuning step (used for timeout checks)
 static int8_t   autotune_counter;                                       // counter for tuning gains
 static float    target_rate, start_rate, target_angle, start_angle;     // target and start measurements
-static float    last_rate, autotune_test_accel_max;                     // maximum acceleration variables
+static float    rate_max, autotune_test_accel_max;                     // maximum acceleration variables
 
 // backup of currently being tuned parameter values
 static float    orig_roll_rp = 0, orig_roll_ri, orig_roll_rd, orig_roll_sp;
 static float    orig_pitch_rp = 0, orig_pitch_ri, orig_pitch_rd, orig_pitch_sp;
-static float    orig_yaw_rp = 0, orig_yaw_ri, orig_yaw_rLPF, orig_yaw_sp;
+static float    orig_yaw_rp = 0, orig_yaw_ri, orig_yaw_rd, orig_yaw_rLPF, orig_yaw_sp;
 
 // currently being tuned parameter values
 static float    tune_roll_rp, tune_roll_rd, tune_roll_sp, tune_roll_accel;
@@ -351,7 +351,7 @@ static void autotune_attitude_control()
             autotune_test_max = 0;
             autotune_test_min = 0;
             rotation_rate = 0;
-            last_rate = 0;
+            rate_max = 0;
             // set gains to their to-be-tested values
             autotune_load_twitch_gains();
         }
@@ -443,7 +443,7 @@ static void autotune_attitude_control()
 
         if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
             autotune_twitching_measure(lean_angle, autotune_test_min, autotune_test_max);
-            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, last_rate);
+            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, rate_max);
             autotune_twitching_test_p(target_angle, autotune_test_max);
         } else {
             autotune_twitching_measure(rotation_rate, autotune_test_min, autotune_test_max);
@@ -556,9 +556,6 @@ static void autotune_attitude_control()
                 autotune_updating_p_up(tune_yaw_sp, AUTOTUNE_SP_MAX, AUTOTUNE_SP_STEP, target_angle, autotune_test_max);
                 break;
             }
-            if(autotune_counter == 0){
-                autotune_test_accel_max = 0;
-            }
             break;
         }
 
@@ -606,7 +603,6 @@ static void autotune_attitude_control()
                 break;
             case AUTOTUNE_TYPE_SP_DOWN:
                 autotune_state.tune_type++;
-                autotune_test_accel_max = 0;
                 break;
             case AUTOTUNE_TYPE_SP_UP:
                 // we've reached the end of a D-up-down PI-up-down tune type cycle
@@ -727,6 +723,7 @@ static void autotune_backup_gains_and_initialise()
     if (autotune_yaw_enabled()) {
         orig_yaw_rp = g.pid_rate_yaw.kP();
         orig_yaw_ri = g.pid_rate_yaw.kI();
+        orig_yaw_rd = g.pid_rate_yaw.kD();
         orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
         orig_yaw_sp = g.p_stabilize_yaw.kP();
         tune_yaw_rp = g.pid_rate_yaw.kP();
@@ -757,6 +754,7 @@ static void autotune_load_orig_gains()
     if (autotune_yaw_enabled() && orig_yaw_rp != 0) {
         g.pid_rate_yaw.kP(orig_yaw_rp);
         g.pid_rate_yaw.kI(orig_yaw_ri);
+        g.pid_rate_yaw.kD(orig_yaw_rd);
         attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
         g.p_stabilize_yaw.kP(orig_yaw_sp);
     }
@@ -791,6 +789,7 @@ static void autotune_load_tuned_gains()
         if (tune_yaw_rp != 0) {
             g.pid_rate_yaw.kP(tune_yaw_rp);
             g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
+            g.pid_rate_yaw.kD(0.0f);
             attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
             g.p_stabilize_yaw.kP(tune_yaw_sp);
         } else {
@@ -834,6 +833,7 @@ static void autotune_load_intra_test_gains()
         if (orig_yaw_rp != 0) {
             g.pid_rate_yaw.kP(orig_yaw_rp);
             g.pid_rate_yaw.kI(orig_yaw_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
+            g.pid_rate_yaw.kD(orig_yaw_rd);
             attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
             g.p_stabilize_yaw.kP(orig_yaw_sp);
         } else {
@@ -876,6 +876,7 @@ static void autotune_load_twitch_gains()
             if (tune_yaw_rp != 0) {
                 g.pid_rate_yaw.kP(tune_yaw_rp);
                 g.pid_rate_yaw.kI(tune_yaw_rp*0.01f);
+                g.pid_rate_yaw.kD(0.0f);
                 attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
             }else{
@@ -940,6 +941,7 @@ static void autotune_save_tuning_gains()
                 // rate yaw gains
                 g.pid_rate_yaw.kP(tune_yaw_rp);
                 g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
+                g.pid_rate_yaw.kD(0.0f);
                 g.pid_rate_yaw.save_gains();
                 attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
                 attitude_control.save_rate_yaw_filt();
@@ -951,6 +953,7 @@ static void autotune_save_tuning_gains()
                 // resave pids to originals in case the autotune is run again
                 orig_yaw_rp = g.pid_rate_yaw.kP();
                 orig_yaw_ri = g.pid_rate_yaw.kI();
+                orig_yaw_rd = g.pid_rate_yaw.kD();
                 orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
                 orig_yaw_sp = g.p_stabilize_yaw.kP();
             }
@@ -1180,12 +1183,10 @@ void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_r
     }
 }
 
-void autotune_twitching_measure_acceleration(float &rate_of_change, float measurement, float &last_measurement)
+void autotune_twitching_measure_acceleration(float &rate_of_change, float measurement, float &max_measurement)
 {
-    if (last_measurement != 0) {
-        rate_of_change = max(rate_of_change, fabs(measurement-last_measurement)/MAIN_LOOP_SECONDS);
-    }
-    last_measurement = measurement;
+    max_measurement = max(max_measurement, fabs(measurement));
+    rate_of_change = 2000.0f*max_measurement/(millis() - autotune_step_start_time);
 }
 
 #endif  // AUTOTUNE_ENABLED == ENABLED
