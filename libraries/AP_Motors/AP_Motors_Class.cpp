@@ -131,7 +131,17 @@ AP_Motors::AP_Motors( RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_
     _min_throttle(AP_MOTORS_DEFAULT_MIN_THROTTLE),
     _max_throttle(AP_MOTORS_DEFAULT_MAX_THROTTLE),
     _hover_out(AP_MOTORS_DEFAULT_MID_THROTTLE),
-    _spin_when_armed_ramped(0)
+    _spin_when_armed_ramped(0),
+    _batt_voltage(0.0f),
+    _batt_voltage_resting(0.0f),
+    _batt_voltage_filt(0.0f),
+    _batt_current(0.0f),
+    _batt_current_resting(0.0f),
+    _batt_resistance(0.0f),
+    _batt_timer(0),
+    _batt_rem(0.0f),
+    _lift_max(0.0f),
+    _throttle_limit(0.0f)
 {
     AP_Param::setup_object_defaults(this, var_info);
 

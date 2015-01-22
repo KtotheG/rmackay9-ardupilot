@@ -197,19 +197,13 @@ protected:
     AP_Int8             _throttle_curve_max;    // throttle which produces the maximum thrust.  expressed as a percentage (i.e. 0 ~ 100 ) of the full throttle range
     AP_Int16            _spin_when_armed;       // used to control whether the motors always spin when armed.  pwm value above radio_min
 
-    AP_Float            _batt_voltage;          // latest battery voltage reading
-    AP_Float            _batt_voltage_resting;  // battery voltage reading at minimum throttle
-    AP_Float            _batt_current;          // latest battery current reading
-    AP_Float            _batt_current_resting;  // battery current reading at minimum throttle
-    AP_Float            _batt_resistance;       // battery resistance estimation
-    AP_Float            _batt_current_max;      // current over which maximum throttle is limited
-    AP_Float            _throttle_limit;        // ratio of throttle limit between hover and maximum
     AP_Float            _throttle_low_comp;     // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
     AP_Float            _thrust_expo;           // set to 0 for linear and 1 for second order approximation
     AP_Float            _thrust_curve_max;      // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
-    AP_Float            _matrix_yaw_min;        // set to 0 for linear and 1 for second order approximation
     AP_Float            _batt_voltage_max;      // maximum voltage used to scale lift
     AP_Float            _batt_voltage_min;      // minimum voltage used to scale lift
+    AP_Float            _matrix_yaw_min;        // set to 0 for linear and 1 for second order approximation
+    AP_Float            _batt_current_max;      // current over which maximum throttle is limited
 
     // internal variables
     RC_Channel&         _rc_roll;               // roll input in from users is held in servo_out
@@ -223,14 +217,15 @@ protected:
     int16_t             _spin_when_armed_ramped;// equal to _spin_when_armed parameter but slowly ramped up from zero
 
     // battery voltage compensation variables
-    float               _batt_voltage;          // last battery voltage
-    float               _batt_voltage_resting;  // last battery voltage
+    float               _batt_voltage;          // latest battery voltage reading
+    float               _batt_voltage_resting;  // battery voltage reading at minimum throttle
     float               _batt_voltage_filt;     // filtered battery voltage
-    float               _batt_current;          // last battery voltage
+    float               _batt_current;          // latest battery current reading
     float               _batt_current_resting;  // last battery voltage
     float               _batt_resistance;       // last battery voltage
     int16_t             _batt_timer;            // last battery voltage
     float               _batt_rem;              // last battery voltage
     float               _lift_max;              // maximum lift ratio from battery voltage
+    float               _throttle_limit;        // ratio of throttle limit between hover and maximum
 };
 #endif  // __AP_MOTORS_CLASS_H__
