@@ -405,6 +405,7 @@ static void autotune_attitude_control()
             // Testing rate P and D gains so will set body-frame rate targets.
             // Rate controller will use existing body-frame rates and convert to motor outputs
             // for all axes except the one we override here.
+            attitude_control.angle_ef_roll_pitch_rate_ef_yaw( 0.0f, 0.0f, 0.0f);
             switch (autotune_state.axis) {
                 case AUTOTUNE_AXIS_ROLL:
                     // override body-frame roll rate
@@ -425,16 +426,16 @@ static void autotune_attitude_control()
         // Add filter to measurements
         switch (autotune_state.axis) {
         case AUTOTUNE_AXIS_ROLL:
-            rotation_rate = fabs(ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate);
-            lean_angle = labs(ahrs.roll_sensor - (int32_t)start_angle);
+            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate;
+            lean_angle = direction_sign * ahrs.roll_sensor - (int32_t)start_angle;
             break;
         case AUTOTUNE_AXIS_PITCH:
-            rotation_rate = fabs(ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate);
-            lean_angle = labs(ahrs.pitch_sensor - (int32_t)start_angle);
+            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate;
+            lean_angle = direction_sign * ahrs.pitch_sensor - (int32_t)start_angle;
             break;
         case AUTOTUNE_AXIS_YAW:
-            rotation_rate = fabs(ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate);
-            lean_angle = labs(wrap_180_cd(ahrs.yaw_sensor-(int32_t)start_angle));
+            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate;
+            lean_angle = direction_sign * wrap_180_cd(ahrs.yaw_sensor-(int32_t)start_angle);
             break;
         }
 
@@ -444,7 +445,7 @@ static void autotune_attitude_control()
         if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
             autotune_twitching_measure(lean_angle, autotune_test_min, autotune_test_max);
             autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, rate_max);
-            autotune_twitching_test_p(target_angle, autotune_test_max);
+            autotune_twitching_test_p(target_angle, autotune_test_max, rotation_rate);
         } else {
             autotune_twitching_measure(rotation_rate, autotune_test_min, autotune_test_max);
             autotune_twitching_test_d(target_rate, autotune_test_min, autotune_test_max);
@@ -1011,7 +1012,7 @@ void autotune_twitching_measure(float measurement, float &measurement_min, float
 }
 
 // send message to ground station
-void autotune_twitching_test_p(float target, float measurement_max)
+void autotune_twitching_test_p(float target, float measurement_max, float measurement_ddt)
 {
     // rate P and D testing completes when the vehicle reaches 20deg
     if (measurement_max < target * 0.9f) {
@@ -1021,6 +1022,11 @@ void autotune_twitching_test_p(float target, float measurement_max)
 
     // rate P and D testing completes when the vehicle reaches 20deg
     if (measurement_max > target) {
+        autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
+    }
+
+    // check to see if we have stopped
+    if (measurement_ddt < 0.0f && measurement_max < target * 0.5f) {
         autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
     }
 
@@ -1186,7 +1192,7 @@ void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_r
 void autotune_twitching_measure_acceleration(float &rate_of_change, float measurement, float &max_measurement)
 {
     max_measurement = max(max_measurement, fabs(measurement));
-    rate_of_change = 2000.0f*max_measurement/(millis() - autotune_step_start_time);
+    rate_of_change = (1000.0f*(2.0f*max_measurement-measurement))/(millis() - autotune_step_start_time);
 }
 
 #endif  // AUTOTUNE_ENABLED == ENABLED
