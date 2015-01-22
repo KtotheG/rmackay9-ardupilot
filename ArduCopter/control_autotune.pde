@@ -84,6 +84,7 @@
 #define AUTOTUNE_MESSAGE_STOPPED 1
 #define AUTOTUNE_MESSAGE_SUCCESS 2
 #define AUTOTUNE_MESSAGE_FAILED 3
+#define AUTOTUNE_MESSAGE_SAVED_GAINS 4
 
 // autotune modes (high level states)
 enum AutoTuneTuneMode {
@@ -960,7 +961,8 @@ static void autotune_save_tuning_gains()
                 orig_yaw_sp = g.p_stabilize_yaw.kP();
             }
         }
-        // log save gains event
+        // update GCS and log save gains event
+        autotune_update_gcs(AUTOTUNE_MESSAGE_SAVED_GAINS);
         Log_Write_Event(DATA_AUTOTUNE_SAVEDGAINS);
     }
 }
@@ -980,6 +982,9 @@ void autotune_update_gcs(uint8_t message_id)
             break;
         case AUTOTUNE_MESSAGE_FAILED:
             gcs_send_text_P(SEVERITY_HIGH,PSTR("AutoTune: Failed"));
+            break;
+        case AUTOTUNE_MESSAGE_SAVED_GAINS:
+            gcs_send_text_P(SEVERITY_HIGH,PSTR("AutoTune: Saved Gains"));
             break;
     }
 }
