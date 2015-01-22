@@ -426,15 +426,15 @@ static void autotune_attitude_control()
         // Add filter to measurements
         switch (autotune_state.axis) {
         case AUTOTUNE_AXIS_ROLL:
-            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate;
-            lean_angle = direction_sign * ahrs.roll_sensor - (int32_t)start_angle;
+            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate);
+            lean_angle = direction_sign * (ahrs.roll_sensor - (int32_t)start_angle);
             break;
         case AUTOTUNE_AXIS_PITCH:
-            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate;
-            lean_angle = direction_sign * ahrs.pitch_sensor - (int32_t)start_angle;
+            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate);
+            lean_angle = direction_sign * (ahrs.pitch_sensor - (int32_t)start_angle);
             break;
         case AUTOTUNE_AXIS_YAW:
-            rotation_rate = direction_sign * ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate;
+            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate);
             lean_angle = direction_sign * wrap_180_cd(ahrs.yaw_sensor-(int32_t)start_angle);
             break;
         }
