@@ -202,7 +202,7 @@ static void tuning() {
          break;
 
      case CH6_RATE_YAW_FILT:
-         attitude_control.set_rate_yaw_filt(tuning_value);
+         g.pid_rate_yaw.filt_hz(tuning_value);
          break;
     }
 }
