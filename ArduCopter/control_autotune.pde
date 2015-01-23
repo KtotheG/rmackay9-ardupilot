@@ -727,10 +727,10 @@ static void autotune_backup_gains_and_initialise()
         orig_yaw_rp = g.pid_rate_yaw.kP();
         orig_yaw_ri = g.pid_rate_yaw.kI();
         orig_yaw_rd = g.pid_rate_yaw.kD();
-        orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
+        orig_yaw_rLPF = g.pid_rate_yaw.filt_hz();
         orig_yaw_sp = g.p_stabilize_yaw.kP();
         tune_yaw_rp = g.pid_rate_yaw.kP();
-        tune_yaw_rLPF = attitude_control.get_rate_yaw_filt();
+        tune_yaw_rLPF = g.pid_rate_yaw.filt_hz();
         tune_yaw_sp = g.p_stabilize_yaw.kP();
     }
 
@@ -758,7 +758,7 @@ static void autotune_load_orig_gains()
         g.pid_rate_yaw.kP(orig_yaw_rp);
         g.pid_rate_yaw.kI(orig_yaw_ri);
         g.pid_rate_yaw.kD(orig_yaw_rd);
-        attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
+        g.pid_rate_yaw.filt_hz(orig_yaw_rLPF);
         g.p_stabilize_yaw.kP(orig_yaw_sp);
     }
 }
@@ -793,7 +793,7 @@ static void autotune_load_tuned_gains()
             g.pid_rate_yaw.kP(tune_yaw_rp);
             g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
             g.pid_rate_yaw.kD(0.0f);
-            attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
+            g.pid_rate_yaw.filt_hz(tune_yaw_rLPF);
             g.p_stabilize_yaw.kP(tune_yaw_sp);
         } else {
             failed = true;
@@ -837,7 +837,7 @@ static void autotune_load_intra_test_gains()
             g.pid_rate_yaw.kP(orig_yaw_rp);
             g.pid_rate_yaw.kI(orig_yaw_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
             g.pid_rate_yaw.kD(orig_yaw_rd);
-            attitude_control.set_rate_yaw_filt(orig_yaw_rLPF);
+            g.pid_rate_yaw.filt_hz(orig_yaw_rLPF);
             g.p_stabilize_yaw.kP(orig_yaw_sp);
         } else {
             failed = true;
@@ -880,7 +880,7 @@ static void autotune_load_twitch_gains()
                 g.pid_rate_yaw.kP(tune_yaw_rp);
                 g.pid_rate_yaw.kI(tune_yaw_rp*0.01f);
                 g.pid_rate_yaw.kD(0.0f);
-                attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
+                g.pid_rate_yaw.filt_hz(tune_yaw_rLPF);
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
             }else{
                 failed = true;
@@ -945,19 +945,17 @@ static void autotune_save_tuning_gains()
                 g.pid_rate_yaw.kP(tune_yaw_rp);
                 g.pid_rate_yaw.kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
                 g.pid_rate_yaw.kD(0.0f);
+                g.pid_rate_yaw.filt_hz(tune_yaw_rLPF);
                 g.pid_rate_yaw.save_gains();
-                attitude_control.set_rate_yaw_filt(tune_yaw_rLPF);
-                attitude_control.save_rate_yaw_filt();
                 // stabilize yaw
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
                 g.p_stabilize_yaw.save_gains();
-                attitude_control.save_accel_yaw_max(tune_yaw_accel);
 
                 // resave pids to originals in case the autotune is run again
                 orig_yaw_rp = g.pid_rate_yaw.kP();
                 orig_yaw_ri = g.pid_rate_yaw.kI();
                 orig_yaw_rd = g.pid_rate_yaw.kD();
-                orig_yaw_rLPF = attitude_control.get_rate_yaw_filt();
+                orig_yaw_rLPF = g.pid_rate_yaw.filt_hz();
                 orig_yaw_sp = g.p_stabilize_yaw.kP();
             }
         }
