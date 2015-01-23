@@ -79,15 +79,6 @@ public:
     // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
     void set_dt(float delta_sec);
 
-    // set_rate_yaw_filt - sets the cut off frequency of the yaw pid filter
-    void set_rate_yaw_filt(float rate_yaw_filt);
-
-    // get_rate_yaw_filt - gets the cut off frequency of the yaw pid filter
-    float get_rate_yaw_filt() const { return _rate_yaw_filt; }
-
-    // save_rate_yaw_filt - saves the cut off frequency of the yaw pid filter
-    void save_rate_yaw_filt() { _rate_yaw_filt.save(); }
-
     // save_accel_roll_max - sets and saves the roll acceleration limit
     void save_accel_roll_max(float accel_roll_max) { _accel_roll_max = accel_roll_max; _accel_roll_max.save(); }
 
@@ -155,17 +146,17 @@ public:
     void rate_bf_pitch_target(float rate_cds) { _rate_bf_target.y = rate_cds; }
     void rate_bf_yaw_target(float rate_cds) { _rate_bf_target.z = rate_cds; }
 
-    float max_rate_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_roll.get_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP()); }
+    float max_rate_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_roll.get_input_filt_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP()); }
 
-    float max_rate_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_pitch.get_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP()); }
+    float max_rate_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_pitch.get_input_filt_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP()); }
 
-    float max_rate_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_yaw.get_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP()); }
+    float max_rate_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_yaw.get_input_filt_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP()); }
 
-    float max_angle_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_roll.kP()*((_pid_rate_roll.get_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP())); }
+    float max_angle_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_roll.kP()*((_pid_rate_roll.get_input_filt_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP())); }
 
-    float max_angle_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_pitch.kP()*((_pid_rate_pitch.get_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP())); }
+    float max_angle_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_pitch.kP()*((_pid_rate_pitch.get_input_filt_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP())); }
 
-    float max_angle_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_yaw.kP()*((_pid_rate_yaw.get_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP())); }
+    float max_angle_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_yaw.kP()*((_pid_rate_yaw.get_input_filt_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP())); }
 
     // rate_ef_targets - returns rate controller body-frame targets (for reporting)
     const Vector3f& rate_bf_targets() const { return _rate_bf_target; }
@@ -262,9 +253,6 @@ protected:
     AP_Float            _accel_pitch_max;          // maximum rotation acceleration for earth-frame pitch axis
     AP_Float            _accel_yaw_max;           // maximum rotation acceleration for earth-frame yaw axis
     AP_Int8             _rate_bf_ff_enabled;    // Enable/Disable body frame rate feed forward
-    AP_Float            _rate_roll_filt;        // filter frequency of the roll pid filter in Hz
-    AP_Float            _rate_pitch_filt;       // filter frequency of the pitch pid filter in Hz
-    AP_Float            _rate_yaw_filt;         // filter frequency of the yaw pid filter in Hz
 
     // internal variables
     // To-Do: make rate targets a typedef instead of Vector3f?
