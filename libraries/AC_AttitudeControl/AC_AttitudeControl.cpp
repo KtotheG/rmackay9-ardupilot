@@ -90,34 +90,6 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] PROGMEM = {
     // @User: Advanced
     AP_GROUPINFO("ACCEL_Y_MAX",  8, AC_AttitudeControl, _accel_yaw_max, AC_ATTITUDE_CONTROL_ACCEL_Y_MAX_DEFAULT),
 
-    // @Param: RATE_R_FLT
-    // @DisplayName: Roll PID filter frequency
-    // @Description: Roll PID filter frequency
-    // @Units: Hz
-    // @Range: 1.0 10.0
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("RATE_R_FLT",  9, AC_AttitudeControl, _rate_roll_filt, AC_ATTITUDE_RATE_RP_PID_FILTER),
-
-    // @Param: RATE_P_FLT
-    // @DisplayName: Pitch PID filter frequency
-    // @Description: Pitch PID filter frequency
-    // @Units: Hz
-    // @Range: 1.0 10.0
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("RATE_P_FLT",  10, AC_AttitudeControl, _rate_pitch_filt, AC_ATTITUDE_RATE_RP_PID_FILTER),
-
-    // @Param: RATE_Y_FLT
-    // @DisplayName: Yaw PID filter frequency
-    // @Description: Yaw PID filter frequency
-    // @Units: Hz
-    // @Range: 1.0 10.0
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("RATE_Y_FLT",  11, AC_AttitudeControl, _rate_yaw_filt, AC_ATTITUDE_RATE_Y_PID_FILTER),
-
-
     AP_GROUPEND
 };
 
@@ -130,15 +102,9 @@ void AC_AttitudeControl::set_dt(float delta_sec)
     _dt = delta_sec;
 
     // set attitude controller's D term filters
-    _pid_rate_roll.set_d_lpf_alpha(_rate_roll_filt, _dt);
-    _pid_rate_pitch.set_d_lpf_alpha(_rate_pitch_filt, _dt);
-    _pid_rate_yaw.set_d_lpf_alpha(_rate_yaw_filt, _dt);
-}
-
-void AC_AttitudeControl::set_rate_yaw_filt(float rate_yaw_filt)
-{
-    _rate_yaw_filt = rate_yaw_filt;
-    _pid_rate_yaw.set_d_lpf_alpha(_rate_yaw_filt, _dt);
+    _pid_rate_roll.set_dt(_dt);
+    _pid_rate_pitch.set_dt(_dt);
+    _pid_rate_yaw.set_dt(_dt);
 }
 
 // relax_bf_rate_controller - ensure body-frame rate controller has zero errors to relax rate controller output
@@ -631,18 +597,21 @@ float AC_AttitudeControl::rate_bf_to_motor_roll(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error = rate_target_cds - current_rate;
-    p = _pid_rate_roll.get_p(rate_error);
+    _pid_rate_roll.set_input(rate_error);
+
+    // get p value
+    p = _pid_rate_roll.get_p();
 
     // get i term
     i = _pid_rate_roll.get_integrator();
 
     // update i term as long as we haven't breached the limits or the I term will certainly reduce
     if (!_motors.limit.roll_pitch || ((i>0&&rate_error<0)||(i<0&&rate_error>0))) {
-        i = _pid_rate_roll.get_i(rate_error, _dt);
+        i = _pid_rate_roll.get_i();
     }
 
     // get d term
-    d = _pid_rate_roll.get_d(rate_error, _dt);
+    d = _pid_rate_roll.get_d();
 
     // constrain output and return
     return constrain_float((p+i+d), -AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX, AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX);
@@ -663,18 +632,21 @@ float AC_AttitudeControl::rate_bf_to_motor_pitch(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error = rate_target_cds - current_rate;
-    p = _pid_rate_pitch.get_p(rate_error);
+    _pid_rate_pitch.set_input(rate_error);
+
+    // get p value
+    p = _pid_rate_pitch.get_p();
 
     // get i term
     i = _pid_rate_pitch.get_integrator();
 
     // update i term as long as we haven't breached the limits or the I term will certainly reduce
     if (!_motors.limit.roll_pitch || ((i>0&&rate_error<0)||(i<0&&rate_error>0))) {
-        i = _pid_rate_pitch.get_i(rate_error, _dt);
+        i = _pid_rate_pitch.get_i();
     }
 
     // get d term
-    d = _pid_rate_pitch.get_d(rate_error, _dt);
+    d = _pid_rate_pitch.get_d();
 
     // constrain output and return
     return constrain_float((p+i+d), -AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX, AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX);
@@ -695,20 +667,21 @@ float AC_AttitudeControl::rate_bf_to_motor_yaw(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error  = rate_target_cds - current_rate;
-
-    // get d value and filter
-    d = _pid_rate_yaw.get_d_filt(rate_error, _dt);
+    _pid_rate_yaw.set_input(rate_error);
 
     // get p value
-    p = _pid_rate_yaw.get_p_filt();
+    p = _pid_rate_yaw.get_p();
 
     // get i term
     i = _pid_rate_yaw.get_integrator();
 
     // update i term as long as we haven't breached the limits or the I term will certainly reduce
     if (!_motors.limit.yaw || ((i>0&&rate_error<0)||(i<0&&rate_error>0))) {
-        i = _pid_rate_yaw.get_i_filt(_dt);
+        i = _pid_rate_yaw.get_i();
     }
+
+    // get d value
+    d = _pid_rate_yaw.get_d();
 
     // constrain output and return
     return constrain_float((p+i+d), -AC_ATTITUDE_RATE_YAW_CONTROLLER_OUT_MAX, AC_ATTITUDE_RATE_YAW_CONTROLLER_OUT_MAX);
