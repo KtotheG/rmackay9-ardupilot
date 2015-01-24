@@ -63,8 +63,10 @@
 #define AUTOTUNE_RP_MIN                   0.01f     // minimum Rate P value
 #define AUTOTUNE_RP_MAX                  100.0f     // maximum Rate P value
 #define AUTOTUNE_SP_MAX                   20.0f     // maximum Stab P value
-#define AUTOTUNE_SP_MIN                   1.0f      // maximum Stab P value
-#define AUTOTUNE_ACCEL_BACKOFF            0.5f      // back off from maximum acceleration
+#define AUTOTUNE_SP_MIN                    1.0f     // maximum Stab P value
+#define AUTOTUNE_ACCEL_BACKOFF             0.5f     // back off from maximum acceleration
+#define AUTOTUNE_RP_ACCEL_MIN          50000.0f     // Minimum acceleration for Roll and Pitch
+#define AUTOTUNE_Y_ACCEL_MIN           18000.0f     // Minimum acceleration for Roll and Pitch
 #define AUTOTUNE_SUCCESS_COUNT                4     // how many successful iterations we need to freeze at current gains
 
 // roll and pitch axes
@@ -428,15 +430,27 @@ static void autotune_attitude_control()
         // Add filter to measurements
         switch (autotune_state.axis) {
         case AUTOTUNE_AXIS_ROLL:
-            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f - autotune_start_rate);
+            if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f);
+            }else{
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().x) * 100.0f - autotune_start_rate);
+            }
             lean_angle = direction_sign * (ahrs.roll_sensor - (int32_t)autotune_start_angle);
             break;
         case AUTOTUNE_AXIS_PITCH:
-            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f - autotune_start_rate);
+            if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f);
+            }else{
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().y) * 100.0f - autotune_start_rate);
+            }
             lean_angle = direction_sign * (ahrs.pitch_sensor - (int32_t)autotune_start_angle);
             break;
         case AUTOTUNE_AXIS_YAW:
-            rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f - autotune_start_rate);
+            if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f);
+            }else{
+                rotation_rate = direction_sign * (ToDeg(ahrs.get_gyro().z) * 100.0f - autotune_start_rate);
+            }
             lean_angle = direction_sign * wrap_180_cd(ahrs.yaw_sensor-(int32_t)autotune_start_angle);
             break;
         }
@@ -446,7 +460,7 @@ static void autotune_attitude_control()
 
         if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
             autotune_twitching_measure(lean_angle, autotune_test_min, autotune_test_max);
-            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, rate_max);
+            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate - direction_sign * autotune_start_rate, rate_max);
             autotune_twitching_test_p(autotune_target_angle, autotune_test_max, rotation_rate);
         } else {
             autotune_twitching_measure(rotation_rate, autotune_test_min, autotune_test_max);
@@ -616,7 +630,7 @@ static void autotune_attitude_control()
                 switch (autotune_state.axis) {
                 case AUTOTUNE_AXIS_ROLL:
                     tune_roll_sp = tune_roll_sp * AUTOTUNE_SP_BACKOFF;
-                    tune_roll_accel = autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_roll()/autotune_target_angle), 1.0f);
+                    tune_roll_accel = max(AUTOTUNE_RP_ACCEL_MIN, autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_roll()/autotune_target_angle), 1.0f));
                     if (autotune_pitch_enabled()) {
                         autotune_state.axis = AUTOTUNE_AXIS_PITCH;
                     } else if (autotune_yaw_enabled()) {
@@ -627,7 +641,7 @@ static void autotune_attitude_control()
                     break;
                 case AUTOTUNE_AXIS_PITCH:
                     tune_pitch_sp = tune_pitch_sp * AUTOTUNE_SP_BACKOFF;
-                    tune_pitch_accel = autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_pitch()/autotune_target_angle), 1.0f);
+                    tune_pitch_accel = max(AUTOTUNE_RP_ACCEL_MIN, autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_pitch()/autotune_target_angle), 1.0f));
                     if (autotune_yaw_enabled()) {
                         autotune_state.axis = AUTOTUNE_AXIS_YAW;
                     } else {
@@ -636,7 +650,7 @@ static void autotune_attitude_control()
                     break;
                 case AUTOTUNE_AXIS_YAW:
                     tune_yaw_sp = tune_yaw_sp * AUTOTUNE_SP_BACKOFF;
-                    tune_yaw_accel = autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_yaw()/autotune_target_angle), 1.0f);
+                    tune_yaw_accel = max(AUTOTUNE_Y_ACCEL_MIN, autotune_test_accel_max * AUTOTUNE_ACCEL_BACKOFF * max((attitude_control.max_angle_step_bf_yaw()/autotune_target_angle), 1.0f));
                     autotune_complete = true;
                     break;
                 }
@@ -1030,7 +1044,7 @@ void autotune_twitching_test_p(float target, float measurement_max, float measur
     }
 
     // check to see if we have stopped
-    if (measurement_ddt < 0.0f && measurement_max < target * 0.5f) {
+    if (measurement_ddt < 0.0f && measurement_max > target * 0.5f) {
         autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
     }
 
@@ -1195,8 +1209,10 @@ void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_r
 
 void autotune_twitching_measure_acceleration(float &rate_of_change, float measurement, float &max_measurement)
 {
-    max_measurement = max(max_measurement, fabs(measurement));
-    rate_of_change = (1000.0f*(2.0f*max_measurement-measurement))/(millis() - autotune_step_start_time);
+    if(max_measurement > measurement){
+        max_measurement = measurement;
+        rate_of_change = (1000.0f*max_measurement)/(millis() - autotune_step_start_time);
+    }
 }
 
 #endif  // AUTOTUNE_ENABLED == ENABLED
