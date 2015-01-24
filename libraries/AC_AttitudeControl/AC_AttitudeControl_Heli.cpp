@@ -163,8 +163,8 @@ void AC_AttitudeControl_Heli::rate_bf_to_motor_roll_pitch(float rate_roll_target
     rate_pitch_error = rate_pitch_target_cds - gyro.y * AC_ATTITUDE_CONTROL_DEGX100;
 
     // input to PID controller
-    _pid_rate_roll.set_input(rate_roll_error);
-    _pid_rate_pitch.set_input(rate_pitch_error);
+    _pid_rate_roll.set_input_filter_all(rate_roll_error);
+    _pid_rate_pitch.set_input_filter_all(rate_pitch_error);
 
     // call p and d controllers
     roll_pd = _pid_rate_roll.get_p() + _pid_rate_roll.get_d();
@@ -327,7 +327,7 @@ float AC_AttitudeControl_Heli::rate_bf_to_motor_yaw(float rate_target_cds)
     rate_error  = rate_target_cds - current_rate;
 
     // send input to PID controller
-    _pid_rate_yaw.set_input(rate_error);
+    _pid_rate_yaw.set_input_filter_all(rate_error);
 
     // get p and d
     pd = _pid_rate_yaw.get_p() + _pid_rate_yaw.get_d();
