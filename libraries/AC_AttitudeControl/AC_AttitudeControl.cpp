@@ -597,7 +597,7 @@ float AC_AttitudeControl::rate_bf_to_motor_roll(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error = rate_target_cds - current_rate;
-    _pid_rate_roll.set_input(rate_error);
+    _pid_rate_roll.set_input_filter_d(rate_error);
 
     // get p value
     p = _pid_rate_roll.get_p();
@@ -632,7 +632,7 @@ float AC_AttitudeControl::rate_bf_to_motor_pitch(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error = rate_target_cds - current_rate;
-    _pid_rate_pitch.set_input(rate_error);
+    _pid_rate_pitch.set_input_filter_d(rate_error);
 
     // get p value
     p = _pid_rate_pitch.get_p();
@@ -667,7 +667,7 @@ float AC_AttitudeControl::rate_bf_to_motor_yaw(float rate_target_cds)
 
     // calculate error and call pid controller
     rate_error  = rate_target_cds - current_rate;
-    _pid_rate_yaw.set_input(rate_error);
+    _pid_rate_yaw.set_input_filter_all(rate_error);
 
     // get p value
     p = _pid_rate_yaw.get_p();
