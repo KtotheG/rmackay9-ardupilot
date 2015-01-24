@@ -372,7 +372,7 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
     }
 
     // set input to PID
-    _pid_alt_accel.set_input(_accel_error.z);
+    _pid_alt_accel.set_input_filter_d(_accel_error.z);
 
     // separately calculate p, i, d values for logging
     p = _pid_alt_accel.get_p();
@@ -774,8 +774,8 @@ void AC_PosControl::rate_to_accel_xy(float dt, float ekfNavVelGainScaler)
     _vel_error.y = _vel_target.y - vel_curr.y;
 
     // call pid controller
-    _pid_rate_lat.set_input(_vel_error.x);
-    _pid_rate_lon.set_input(_vel_error.y);
+    _pid_rate_lat.set_input_filter_d(_vel_error.x);
+    _pid_rate_lon.set_input_filter_d(_vel_error.y);
 
     // get current i term
     lat_i = _pid_rate_lat.get_integrator();
