@@ -362,16 +362,18 @@ static void Log_Write_Cmd(const AP_Mission::Mission_Command &cmd)
     DataFlash.Log_Write_MavCmd(mission.num_commands(),mav_cmd);
 }
 
-
 struct PACKED log_Rate {
     LOG_PACKET_HEADER;
     uint32_t time_ms;
     int16_t  control_roll;
     int16_t  roll;
+    int16_t  roll_out;
     int16_t  control_pitch;
     int16_t  pitch;
+    int16_t  pitch_out;
     int16_t  control_yaw;
     int16_t  yaw;
+    int16_t  yaw_out;
 };
 
 // Write an attitude packet
@@ -386,10 +388,13 @@ static void Log_Write_Attitude()
         time_ms         : hal.scheduler->millis(),
         control_roll    : (int16_t)rate_targets.x,
         roll            : (int16_t)(ahrs.get_gyro().x * AC_ATTITUDE_CONTROL_DEGX100),
+        roll_out        : (int16_t)(motors.get_roll()),
         control_pitch   : (int16_t)rate_targets.y,
         pitch           : (int16_t)(ahrs.get_gyro().y * AC_ATTITUDE_CONTROL_DEGX100),
+        pitch_out       : (int16_t)(motors.get_pitch()),
         control_yaw     : (int16_t)rate_targets.z,
-        yaw             : (int16_t)(ahrs.get_gyro().z * AC_ATTITUDE_CONTROL_DEGX100)
+        yaw             : (int16_t)(ahrs.get_gyro().z * AC_ATTITUDE_CONTROL_DEGX100),
+        yaw_out         : (int16_t)(motors.get_yaw())
     };
     DataFlash.WriteBlock(&pkt_rate, sizeof(pkt_rate));
 
@@ -570,7 +575,7 @@ static const struct LogStructure log_structure[] PROGMEM = {
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
       "PM",  "HHIhBHB",    "NLon,NLoop,MaxT,PMT,I2CErr,INSErr,INAVErr" },
     { LOG_RATE_MSG, sizeof(log_Rate),
-      "RATE", "Icccccc",    "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
+      "RATE", "Iccccccccc",  "TimeMS,RllDes,Rll,RllOut,PitDes,Pit,PitOut,YawDes,Yaw,YawOut" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
       "STRT", "",            "" },
     { LOG_EVENT_MSG, sizeof(log_Event),         
