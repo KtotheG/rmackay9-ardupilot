@@ -27,9 +27,15 @@ public:
     // set_filt_hz - set input filter hz
     void        set_filt_hz(float hz);
 
-    // set_input - set input to PID controller
+    // set_input_filter_all - set input to PID controller
+    //  input is filtered before the PID controllers are run
     //  this should be called before any other calls to get_p, get_i or get_d
-    void        set_input(float input);
+    void        set_input_filter_all(float input);
+
+    // set_input_filter_d - set input to PID controller
+    //  only input to the D portion of the controller is filtered
+    //  this should be called before any other calls to get_p, get_i or get_d
+    void        set_input_filter_d(float input);
 
     // get_pid - get results from pid controller
     float       get_pid();

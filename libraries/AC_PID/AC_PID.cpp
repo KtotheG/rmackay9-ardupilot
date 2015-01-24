@@ -78,9 +78,10 @@ void AC_PID::set_filt_hz(float hz)
     calc_filt_alpha();
 }
 
-// set_input - set input to PID controller
+// set_input_filter_all - set input to PID controller
+//  input is filtered before the PID controllers are run
 //  this should be called before any other calls to get_p, get_i or get_d
-void AC_PID::set_input(float input)
+void AC_PID::set_input_filter_all(float input)
 {
     // reset input filter to value received
     if (_flags._reset_input_filter) {
@@ -95,6 +96,25 @@ void AC_PID::set_input(float input)
     if (_dt > 0.0f) {
         _last_derivative = input_filt_change / _dt;
     }
+}
+
+// set_input_filter_d - set input to PID controller
+//  only input to the D portion of the controller is filtered
+//  this should be called before any other calls to get_p, get_i or get_d
+void AC_PID::set_input_filter_d(float input)
+{
+    // reset input filter to value received
+    if (_flags._reset_input_filter) {
+        _flags._reset_input_filter = false;
+        _last_derivative = 0.0f;
+    }
+
+    // update filter and calculate derivative
+    if (_dt > 0.0f) {
+        _last_derivative = _last_derivative + (_input_filt_alpha * (_last_derivative - ((input - _input_filt) / _dt)));
+    }
+
+    _input_filt = input;
 }
 
 float AC_PID::get_p() const
