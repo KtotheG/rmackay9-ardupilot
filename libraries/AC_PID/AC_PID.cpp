@@ -43,8 +43,8 @@ const AP_Param::GroupInfo AC_PID::var_info[] PROGMEM = {
 AC_PID::AC_PID(float initial_p, float initial_i, float initial_d, float initial_imax, float initial_filt_hz, float dt) :
     _dt(dt),
     _integrator(0.0f),
-    _input_filt(0.0f),
-    _last_derivative(0.0f)
+    _input(0.0f),
+    _derivative(0.0f)
 {
     // load parameter values from eeprom
     AP_Param::setup_object_defaults(this, var_info);
@@ -56,7 +56,7 @@ AC_PID::AC_PID(float initial_p, float initial_i, float initial_d, float initial_
     _filt_hz = initial_filt_hz;
 
     // reset input filter to first value received
-    _flags._reset_input_filter = true;
+    _flags._reset_filter = true;
 
     // calculate the input filter alpha
     calc_filt_alpha();
@@ -84,17 +84,17 @@ void AC_PID::set_filt_hz(float hz)
 void AC_PID::set_input_filter_all(float input)
 {
     // reset input filter to value received
-    if (_flags._reset_input_filter) {
-        _flags._reset_input_filter = false;
-        _input_filt = input;
-        _last_derivative = 0.0f;
+    if (_flags._reset_filter) {
+        _flags._reset_filter = false;
+        _input = input;
+        _derivative = 0.0f;
     }
 
     // update filter and calculate derivative
-    float input_filt_change = _input_filt_alpha * (input - _input_filt);
-    _input_filt = _input_filt + input_filt_change;
+    float input_filt_change = _filt_alpha * (input - _input);
+    _input = _input + input_filt_change;
     if (_dt > 0.0f) {
-        _last_derivative = input_filt_change / _dt;
+        _derivative = input_filt_change / _dt;
     }
 }
 
@@ -104,28 +104,29 @@ void AC_PID::set_input_filter_all(float input)
 void AC_PID::set_input_filter_d(float input)
 {
     // reset input filter to value received
-    if (_flags._reset_input_filter) {
-        _flags._reset_input_filter = false;
-        _last_derivative = 0.0f;
+    if (_flags._reset_filter) {
+        _flags._reset_filter = false;
+        _derivative = 0.0f;
     }
 
     // update filter and calculate derivative
     if (_dt > 0.0f) {
-        _last_derivative = _last_derivative + (_input_filt_alpha * (_last_derivative - ((input - _input_filt) / _dt)));
+        float derivative = (input - _input) / _dt;
+        _derivative = _derivative + _filt_alpha * (derivative-_derivative);
     }
 
-    _input_filt = input;
+    _input = input;
 }
 
 float AC_PID::get_p() const
 {
-    return (_input_filt * _kp);
+    return (_input * _kp);
 }
 
 float AC_PID::get_i()
 {
     if((_ki != 0) && (_dt != 0)) {
-        _integrator += ((float)_input_filt * _ki) * _dt;
+        _integrator += ((float)_input * _ki) * _dt;
         if (_integrator < -_imax) {
             _integrator = -_imax;
         } else if (_integrator > _imax) {
@@ -139,7 +140,7 @@ float AC_PID::get_i()
 float AC_PID::get_d() const
 {
     // add in derivative component
-    return (_kd * _last_derivative);
+    return (_kd * _derivative);
 }
 
 float AC_PID::get_pi()
@@ -200,5 +201,5 @@ void AC_PID::calc_filt_alpha()
 {    
     // calculate alpha
     float rc = 1/(2*PI*_filt_hz);
-    _input_filt_alpha = _dt / (_dt + rc);
+    _filt_alpha = _dt / (_dt + rc);
 }
