@@ -164,14 +164,15 @@ static void do_erase_logs(void)
 #if AUTOTUNE_ENABLED == ENABLED
 struct PACKED log_AutoTune {
     LOG_PACKET_HEADER;
+    uint32_t time_ms;
     uint8_t axis;           // roll or pitch
     uint8_t tune_step;      // tuning PI or D up or down
-    float   rate_target;       // target achieved rotation rate
+    float   rate_target;    // target achieved rotation rate
     float   rate_min;       // maximum achieved rotation rate
     float   rate_max;       // maximum achieved rotation rate
-    float   new_gain_rp;       // newly calculated gain
-    float   new_gain_rd;       // newly calculated gain
-    float   new_gain_sp;       // newly calculated gain
+    float   new_gain_rp;    // newly calculated gain
+    float   new_gain_rd;    // newly calculated gain
+    float   new_gain_sp;    // newly calculated gain
 };
 
 // Write an Autotune data packet
@@ -179,6 +180,7 @@ static void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float rate_targe
 {
     struct log_AutoTune pkt = {
         LOG_PACKET_HEADER_INIT(LOG_AUTOTUNE_MSG),
+        time_ms     : hal.scheduler->millis(),
         axis        : axis,
         tune_step   : tune_step,
         rate_target : rate_target,
@@ -193,6 +195,7 @@ static void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float rate_targe
 
 struct PACKED log_AutoTuneDetails {
     LOG_PACKET_HEADER;
+    uint32_t time_ms;
     int16_t angle_cd;       // lean angle in centi-degrees
     float   rate_cds;       // current rotation rate in centi-degrees / second
 };
@@ -202,6 +205,7 @@ static void Log_Write_AutoTuneDetails(int16_t angle_cd, float rate_cds)
 {
     struct log_AutoTuneDetails pkt = {
         LOG_PACKET_HEADER_INIT(LOG_AUTOTUNEDETAILS_MSG),
+        time_ms     : hal.scheduler->millis(),
         angle_cd    : angle_cd,
         rate_cds    : rate_cds
     };
@@ -365,15 +369,24 @@ static void Log_Write_Cmd(const AP_Mission::Mission_Command &cmd)
 struct PACKED log_Rate {
     LOG_PACKET_HEADER;
     uint32_t time_ms;
-    int16_t  control_roll;
-    int16_t  roll;
-    int16_t  roll_out;
-    int16_t  control_pitch;
-    int16_t  pitch;
-    int16_t  pitch_out;
-    int16_t  control_yaw;
-    int16_t  yaw;
-    int16_t  yaw_out;
+    float   control_roll;
+    float   roll;
+    float   roll_out;
+    float   control_pitch;
+    float   pitch;
+    float   pitch_out;
+    float   control_yaw;
+    float   yaw;
+    float   yaw_out;
+};
+
+struct PACKED log_Mot {
+    LOG_PACKET_HEADER;
+    uint32_t time_ms;
+    float   lift_max;
+    float   bat_volt;
+    float   bat_res;
+    float   th_limit;
 };
 
 // Write an attitude packet
@@ -382,21 +395,8 @@ static void Log_Write_Attitude()
     Vector3f targets = attitude_control.angle_ef_targets();
     DataFlash.Log_Write_Attitude(ahrs, targets);
 
-    const Vector3f &rate_targets = attitude_control.rate_bf_targets();
-    struct log_Rate pkt_rate = {
-        LOG_PACKET_HEADER_INIT(LOG_RATE_MSG),
-        time_ms         : hal.scheduler->millis(),
-        control_roll    : (int16_t)rate_targets.x,
-        roll            : (int16_t)(ahrs.get_gyro().x * AC_ATTITUDE_CONTROL_DEGX100),
-        roll_out        : (int16_t)(motors.get_roll()),
-        control_pitch   : (int16_t)rate_targets.y,
-        pitch           : (int16_t)(ahrs.get_gyro().y * AC_ATTITUDE_CONTROL_DEGX100),
-        pitch_out       : (int16_t)(motors.get_pitch()),
-        control_yaw     : (int16_t)rate_targets.z,
-        yaw             : (int16_t)(ahrs.get_gyro().z * AC_ATTITUDE_CONTROL_DEGX100),
-        yaw_out         : (int16_t)(motors.get_yaw())
-    };
-    DataFlash.WriteBlock(&pkt_rate, sizeof(pkt_rate));
+    Log_Write_Rate();
+    Log_Write_Mot();
 
 #if AP_AHRS_NAVEKF_AVAILABLE
  #if OPTFLOW == ENABLED
@@ -409,6 +409,40 @@ static void Log_Write_Attitude()
 #if CONFIG_HAL_BOARD == HAL_BOARD_AVR_SITL
     sitl.Log_Write_SIMSTATE(DataFlash);
 #endif
+}
+
+// Write an rate packet
+static void Log_Write_Rate()
+{
+    const Vector3f &rate_targets = attitude_control.rate_bf_targets();
+    struct log_Rate pkt_rate = {
+        LOG_PACKET_HEADER_INIT(LOG_RATE_MSG),
+        time_ms         : hal.scheduler->millis(),
+        control_roll    : (float)rate_targets.x,
+        roll            : (float)(ahrs.get_gyro().x * AC_ATTITUDE_CONTROL_DEGX100),
+        roll_out        : (float)(motors.get_roll()),
+        control_pitch   : (float)rate_targets.y,
+        pitch           : (float)(ahrs.get_gyro().y * AC_ATTITUDE_CONTROL_DEGX100),
+        pitch_out       : (float)(motors.get_pitch()),
+        control_yaw     : (float)rate_targets.z,
+        yaw             : (float)(ahrs.get_gyro().z * AC_ATTITUDE_CONTROL_DEGX100),
+        yaw_out         : (float)(motors.get_yaw())
+    };
+    DataFlash.WriteBlock(&pkt_rate, sizeof(pkt_rate));
+}
+
+// Write an rate packet
+static void Log_Write_Mot()
+{
+    struct log_Mot pkt_mot = {
+        LOG_PACKET_HEADER_INIT(LOG_MOT_MSG),
+        time_ms         : hal.scheduler->millis(),
+        lift_max        : (float)(motors.get_lift_max()),
+        bat_volt        : (float)(motors.get_batt_voltage_filt()),
+        bat_res         : (float)(motors.get_batt_resistance()),
+        th_limit        : (float)(motors.get_throttle_limit())
+    };
+    DataFlash.WriteBlock(&pkt_mot, sizeof(pkt_mot));
 }
 
 struct PACKED log_Startup {
@@ -562,9 +596,9 @@ static const struct LogStructure log_structure[] PROGMEM = {
     LOG_COMMON_STRUCTURES,
 #if AUTOTUNE_ENABLED == ENABLED
     { LOG_AUTOTUNE_MSG, sizeof(log_AutoTune),
-      "ATUN", "BBffffff",       "Axis,TuneStep,RateTarg,RateMin,RateMax,RPGain,RDGain,SPGain" },
+      "ATUN", "IBBffffff",       "TimeMS,Axis,TuneStep,RateTarg,RateMin,RateMax,RP,RD,SP" },
     { LOG_AUTOTUNEDETAILS_MSG, sizeof(log_AutoTuneDetails),
-      "ATDE", "cf",          "Angle,Rate" },
+      "ATDE", "Icf",          "TimeMS,Angle,Rate" },
 #endif
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),       
       "OF",   "IBffff",   "TimeMS,Qual,flowX,flowY,bodyX,bodyY" },
@@ -575,7 +609,9 @@ static const struct LogStructure log_structure[] PROGMEM = {
     { LOG_PERFORMANCE_MSG, sizeof(log_Performance), 
       "PM",  "HHIhBHB",    "NLon,NLoop,MaxT,PMT,I2CErr,INSErr,INAVErr" },
     { LOG_RATE_MSG, sizeof(log_Rate),
-      "RATE", "Iccccccccc",  "TimeMS,RllDes,Rll,RllOut,PitDes,Pit,PitOut,YawDes,Yaw,YawOut" },
+      "RATE", "Ifffffffff",  "TimeMS,RllDes,Rll,RllOut,PitDes,Pit,PitOut,YawDes,Yaw,YawOut" },
+    { LOG_MOT_MSG, sizeof(log_Mot),
+      "MOT", "Iffff",  "TimeMS,LiftMax,BatVolt,BatRes,ThLimit" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
       "STRT", "",            "" },
     { LOG_EVENT_MSG, sizeof(log_Event),         
@@ -651,6 +687,8 @@ static void Log_Write_AutoTuneDetails(int16_t angle_cd, float rate_cds) {}
 #endif
 static void Log_Write_Current() {}
 static void Log_Write_Attitude() {}
+static void Log_Write_Rate() {}
+static void Log_Write_Mot() {}
 static void Log_Write_Data(uint8_t id, int16_t value){}
 static void Log_Write_Data(uint8_t id, uint16_t value){}
 static void Log_Write_Data(uint8_t id, int32_t value){}
