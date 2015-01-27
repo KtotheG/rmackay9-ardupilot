@@ -139,7 +139,6 @@ AP_Motors::AP_Motors( RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_
     _batt_current_resting(0.0f),
     _batt_resistance(0.0f),
     _batt_timer(0),
-    _batt_rem(0.0f),
     _lift_max(0.0f),
     _throttle_limit(0.0f)
 {
