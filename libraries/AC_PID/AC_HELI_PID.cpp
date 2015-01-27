@@ -58,7 +58,7 @@ float AC_HELI_PID::get_leaky_i(float leak_rate)
 {
 	if((_ki != 0) && (_dt != 0)){
 		_integrator -= (float)_integrator * leak_rate;
-		_integrator += ((float)_input_filt * _ki) * _dt;
+		_integrator += ((float)_input * _ki) * _dt;
 		if (_integrator < -_imax) {
 			_integrator = -_imax;
 		} else if (_integrator > _imax) {

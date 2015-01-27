@@ -47,8 +47,8 @@ public:
     // reset_I - reset the integrator
     void        reset_I();
 
-    // reset_input_filter - input filter will be reset to the next value provided to set_input()
-    void        reset_input_filter();
+    // reset_filter - input filter will be reset to the next value provided to set_input()
+    void        reset_filter();
 
     // load gain from eeprom
     void        load_gains();
@@ -65,7 +65,7 @@ public:
     float       kD() const { return _kd.get(); }
     float       imax() const { return _imax.get(); }
     float       filt_hz() const { return _filt_hz.get(); }
-    float       get_input_filt_alpha() const { return _input_filt_alpha; }
+    float       get_filt_alpha() const { return _filt_alpha; }
 
     // set accessors
     void        kP(const float v) { _kp.set(v); }
@@ -94,15 +94,15 @@ protected:
 
     // flags
     struct ac_pid_flags {
-        bool        _reset_input_filter : 1;    // true when input filter should be reset during next call to set_input
+        bool        _reset_filter : 1;    // true when input filter should be reset during next call to set_input
     } _flags;
 
     // internal variables
     float           _dt;                        // timestep in seconds
     float           _integrator;                // integrator value
-    float           _input_filt;                // last input for derivative
-    float           _last_derivative;           // last derivative for low-pass filter
-    float           _input_filt_alpha;          // input filter alpha
+    float           _input;                // last input for derivative
+    float           _derivative;           // last derivative for low-pass filter
+    float           _filt_alpha;          // input filter alpha
 };
 
 #endif // __AC_PID_H__
