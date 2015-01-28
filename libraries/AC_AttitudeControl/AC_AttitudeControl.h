@@ -146,17 +146,19 @@ public:
     void rate_bf_pitch_target(float rate_cds) { _rate_bf_target.y = rate_cds; }
     void rate_bf_yaw_target(float rate_cds) { _rate_bf_target.z = rate_cds; }
 
-    float max_rate_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_roll.get_input_filt_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP()); }
+    // Maximum roll rate step size that results in maximum output after 4 time steps
+    float max_rate_step_bf_roll();
+    // Maximum pitch rate step size that results in maximum output after 4 time steps
+    float max_rate_step_bf_pitch();
+    // Maximum yaw rate step size that results in maximum output after 4 time steps
+    float max_rate_step_bf_yaw();
 
-    float max_rate_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_pitch.get_input_filt_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP()); }
-
-    float max_rate_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/((_pid_rate_yaw.get_input_filt_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP()); }
-
-    float max_angle_step_bf_roll() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_roll.kP()*((_pid_rate_roll.get_input_filt_alpha()*_pid_rate_roll.kD())/_dt + _pid_rate_roll.kP())); }
-
-    float max_angle_step_bf_pitch() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_pitch.kP()*((_pid_rate_pitch.get_input_filt_alpha()*_pid_rate_pitch.kD())/_dt + _pid_rate_pitch.kP())); }
-
-    float max_angle_step_bf_yaw() { return AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX/(_p_angle_yaw.kP()*((_pid_rate_yaw.get_input_filt_alpha()*_pid_rate_yaw.kD())/_dt + _pid_rate_yaw.kP())); }
+    // Maximum roll step size that results in maximum output after 4 time steps
+    float max_angle_step_bf_roll() { return max_rate_step_bf_roll()/_p_angle_roll.kP(); }
+    // Maximum pitch step size that results in maximum output after 4 time steps
+    float max_angle_step_bf_pitch() { return max_rate_step_bf_pitch()/_p_angle_pitch.kP(); }
+    // Maximum yaw step size that results in maximum output after 4 time steps
+    float max_angle_step_bf_yaw() { return max_rate_step_bf_yaw()/_p_angle_yaw.kP(); }
 
     // rate_ef_targets - returns rate controller body-frame targets (for reporting)
     const Vector3f& rate_bf_targets() const { return _rate_bf_target; }
