@@ -117,12 +117,9 @@ void OreoLED_PX4::set_rgb(uint8_t red, uint8_t green, uint8_t blue)
         return;
     }
 
-    // create desired pattern command
-    uint8_t cmd[] = {OREOLED_PATTERN_SOLID, OREOLED_PARAM_BIAS_RED, red, OREOLED_PARAM_BIAS_GREEN, green, OREOLED_PARAM_BIAS_BLUE, blue};
-
     // send pattern to all LEDs
     for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
-        oreoled_rgbset_t rgb_set = {OREOLED_ALL_INSTANCES, OREOLED_PATTERN_SOLID, 0xff, 0x0, 0x0};   // red
+        oreoled_rgbset_t rgb_set = {OREOLED_ALL_INSTANCES, OREOLED_PATTERN_SOLID, red, green, blue};   // red
         ioctl(_oreoled_fd, OREOLED_SET_RGB, (unsigned long)&rgb_set);
     }
 }
