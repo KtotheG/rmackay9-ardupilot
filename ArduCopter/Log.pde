@@ -196,12 +196,12 @@ static void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float rate_targe
 struct PACKED log_AutoTuneDetails {
     LOG_PACKET_HEADER;
     uint32_t time_ms;
-    int16_t angle_cd;       // lean angle in centi-degrees
-    float   rate_cds;       // current rotation rate in centi-degrees / second
+    float    angle_cd;       // lean angle in centi-degrees
+    float    rate_cds;       // current rotation rate in centi-degrees / second
 };
 
 // Write an Autotune data packet
-static void Log_Write_AutoTuneDetails(int16_t angle_cd, float rate_cds)
+static void Log_Write_AutoTuneDetails(float angle_cd, float rate_cds)
 {
     struct log_AutoTuneDetails pkt = {
         LOG_PACKET_HEADER_INIT(LOG_AUTOTUNEDETAILS_MSG),
@@ -598,7 +598,7 @@ static const struct LogStructure log_structure[] PROGMEM = {
     { LOG_AUTOTUNE_MSG, sizeof(log_AutoTune),
       "ATUN", "IBBffffff",       "TimeMS,Axis,TuneStep,RateTarg,RateMin,RateMax,RP,RD,SP" },
     { LOG_AUTOTUNEDETAILS_MSG, sizeof(log_AutoTuneDetails),
-      "ATDE", "Icf",          "TimeMS,Angle,Rate" },
+      "ATDE", "Iff",          "TimeMS,Angle,Rate" },
 #endif
     { LOG_OPTFLOW_MSG, sizeof(log_Optflow),       
       "OF",   "IBffff",   "TimeMS,Qual,flowX,flowY,bodyX,bodyY" },

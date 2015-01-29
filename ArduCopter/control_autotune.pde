@@ -456,15 +456,12 @@ static void autotune_attitude_control()
             break;
         }
 
-        // log this iterations lean angle and rotation rate
-        Log_Write_AutoTuneDetails((int16_t)lean_angle, rotation_rate);
-        Log_Write_Rate();
-
         switch (autotune_state.tune_type) {
         case AUTOTUNE_TYPE_RD_UP:
         case AUTOTUNE_TYPE_RD_DOWN:
             autotune_twitching_measure(rotation_rate, autotune_test_min, autotune_test_max);
             autotune_twitching_test_d(autotune_target_rate, autotune_test_min, autotune_test_max);
+            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, rate_max);
             if (lean_angle >= autotune_target_angle) {
                 autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
             }
@@ -472,6 +469,7 @@ static void autotune_attitude_control()
         case AUTOTUNE_TYPE_RP_UP:
             autotune_twitching_measure(rotation_rate, autotune_test_min, autotune_test_max);
             autotune_twitching_test_p(autotune_target_rate, autotune_test_min, autotune_test_max);
+            autotune_twitching_measure_acceleration(autotune_test_accel_max, rotation_rate, rate_max);
             if (lean_angle >= autotune_target_angle) {
                 autotune_state.step = AUTOTUNE_STEP_UPDATE_GAINS;
             }
@@ -483,6 +481,10 @@ static void autotune_attitude_control()
             autotune_twitching_test_p(autotune_target_angle, autotune_test_max, rotation_rate);
             break;
         }
+
+        // log this iterations lean angle and rotation rate
+        Log_Write_AutoTuneDetails(lean_angle, rotation_rate);
+        Log_Write_Rate();
         break;
 
     case AUTOTUNE_STEP_UPDATE_GAINS:
@@ -1240,11 +1242,11 @@ void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_r
     }
 }
 
-void autotune_twitching_measure_acceleration(float &rate_of_change, float measurement, float &max_measurement)
+void autotune_twitching_measure_acceleration(float &rate_of_change, float rate_measurement, float &rate_measurement_max)
 {
-    if(max_measurement > measurement){
-        max_measurement = measurement;
-        rate_of_change = (1000.0f*max_measurement)/(millis() - autotune_step_start_time);
+    if(rate_measurement_max < rate_measurement){
+        rate_measurement_max = rate_measurement;
+        rate_of_change = (1000.0f*rate_measurement_max)/(millis() - autotune_step_start_time);
     }
 }
 
