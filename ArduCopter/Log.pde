@@ -683,7 +683,7 @@ static void Log_Write_Startup() {}
 static void Log_Write_Mode(uint8_t mode) {}
 #if AUTOTUNE_ENABLED == ENABLED
 static void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float rate_target, float rate_min, float rate_max, float new_gain_rp, float new_gain_rd, float new_gain_sp) {}
-static void Log_Write_AutoTuneDetails(int16_t angle_cd, float rate_cds) {}
+static void Log_Write_AutoTuneDetails(float angle_cd, float rate_cds) {}
 #endif
 static void Log_Write_Current() {}
 static void Log_Write_Attitude() {}
