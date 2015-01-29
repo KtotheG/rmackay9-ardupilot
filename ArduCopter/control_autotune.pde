@@ -64,7 +64,7 @@
 #define AUTOTUNE_RP_MAX                  100.0f     // maximum Rate P value
 #define AUTOTUNE_SP_MAX                   20.0f     // maximum Stab P value
 #define AUTOTUNE_SP_MIN                    1.0f     // maximum Stab P value
-#define AUTOTUNE_ACCEL_BACKOFF             0.5f     // back off from maximum acceleration
+#define AUTOTUNE_ACCEL_BACKOFF             0.75f     // back off from maximum acceleration
 #define AUTOTUNE_RP_ACCEL_MIN          50000.0f     // Minimum acceleration for Roll and Pitch
 #define AUTOTUNE_Y_ACCEL_MIN           18000.0f     // Minimum acceleration for Roll and Pitch
 #define AUTOTUNE_SUCCESS_COUNT                4     // how many successful iterations we need to freeze at current gains
