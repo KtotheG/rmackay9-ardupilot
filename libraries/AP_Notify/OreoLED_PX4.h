@@ -85,12 +85,13 @@ private:
     };
 
     // private members
-    uint8_t _overall_health : 1;                    // overall health
+    bool    _overall_health;                        // overall health
     int     _oreoled_fd;                            // file descriptor
     bool    _send_required;                         // true when we need to send an update to at least one led
     bool    _state_desired_semaphore;               // true when we are updating the state desired values to ensure they are not sent prematurely
     oreo_state _state_desired[OREOLED_NUM_LEDS];    // desired state
     oreo_state _state_sent[OREOLED_NUM_LEDS];       // last state sent to led
+    uint32_t   _last_sync;                          // last time I2C general call was made to sync LEDs.  To-Do: move to PX4Firmware layer
 };
 
 #endif // __OREOLED_PX4_H__

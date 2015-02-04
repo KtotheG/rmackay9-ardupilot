@@ -44,7 +44,8 @@ OreoLED_PX4::OreoLED_PX4() : NotifyDevice(),
     _overall_health(false),
     _oreoled_fd(-1),
     _send_required(false),
-    _state_desired_semaphore(false)
+    _state_desired_semaphore(false),
+    _last_sync(0)
 {
     // initialise desired and sent state
     memset(_state_desired,0,sizeof(_state_desired));
@@ -76,6 +77,7 @@ void OreoLED_PX4::update()
 {
     static uint8_t counter = 0;     // counter to reduce rate from 50hz to 10hz
     static uint8_t step = 0;        // step to control pattern
+    static uint8_t last_stage = 0;  // unique id of the last messages sent to the LED, used to reduce resends which disrupt some patterns
     uint8_t brightness = OREOLED_BRIGHT;
 
     // return immediately if not healthy
@@ -119,6 +121,9 @@ void OreoLED_PX4::update()
             set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);    // red
         }
 
+        // record stage
+        last_stage = 1;
+
         // exit so no other status modify this pattern
         return;
     }
@@ -152,6 +157,8 @@ void OreoLED_PX4::update()
                 set_rgb(OREOLED_INSTANCE_ALL, 0, 0, 0);
                 break;
         }
+        // record stage
+        last_stage = 2;
         // exit so no other status modify this pattern
         return;
     }
@@ -193,29 +200,29 @@ void OreoLED_PX4::update()
                 }
                 break;
         }
+        // record stage
+        last_stage = 3;
         // exit so no other status modify this pattern
         return;
     }
 
-    // check armed status
-    if (AP_Notify::flags.armed) {
-        // default armed pattern is solid white front, solid red back
-        set_rgb(OREOLED_FRONTLEFT, brightness, brightness, brightness); // white
-        set_rgb(OREOLED_FRONTRIGHT, brightness, brightness, brightness); // white
-        set_rgb(OREOLED_BACKLEFT, brightness, 0, 0);    // red
-        set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);   // red
-        return;
-    } else {
-        if (step <= 4) {
-            // all on
-            set_rgb(OREOLED_FRONTLEFT, brightness, brightness, brightness); // white
-            set_rgb(OREOLED_FRONTRIGHT, brightness, brightness, brightness); // white
-            set_rgb(OREOLED_BACKLEFT, brightness, 0, 0);    // red
-            set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);   // red
+    // send colours (later we will set macro if required)
+    if (last_stage < 10) {
+        set_macro(OREOLED_FRONTLEFT, OREOLED_PARAM_MACRO_WHITE); // white
+        set_macro(OREOLED_FRONTRIGHT, OREOLED_PARAM_MACRO_WHITE); // white
+        set_macro(OREOLED_BACKLEFT, OREOLED_PARAM_MACRO_RED);    // red
+        set_macro(OREOLED_BACKRIGHT, OREOLED_PARAM_MACRO_RED);   // red
+        last_stage = 10;
+    } else if (last_stage >= 10) {
+        // check arming status
+        if (AP_Notify::flags.armed) {
+            // reset macro will return LEDs to solid
+            set_macro(OREOLED_INSTANCE_ALL, OREOLED_PARAM_MACRO_RESET);
         } else {
-            // all off
-            set_rgb(OREOLED_INSTANCE_ALL, 0, 0, 0);   // red
+            // start breathing macro
+            set_macro(OREOLED_INSTANCE_ALL, OREOLED_PARAM_MACRO_BREATH);
         }
+        last_stage = 11;
     }
 }
 
@@ -294,8 +301,21 @@ void OreoLED_PX4::set_macro(uint8_t instance, oreoled_macro macro)
 // update_timer - called by scheduler and updates PX4 driver with commands
 void OreoLED_PX4::update_timer(void)
 {
-    // exit immediately if send not required, unhealty or state is being updated
-    if (!_overall_health || !_send_required || _state_desired_semaphore) {
+    // exit immediately if unhealthy
+    if (!_overall_health) {
+        return;
+    }
+
+    // check time for sync
+    uint32_t now = hal.scheduler->millis();
+    if ((now - _last_sync) > 4000) {
+        ioctl(_oreoled_fd, OREOLED_GENERALCALL, (unsigned long)0);
+        _last_sync = now;
+        return;
+    }
+
+    // exit immediately if send not required, or state is being updated
+    if (!_send_required || _state_desired_semaphore) {
         return;
     }
 
