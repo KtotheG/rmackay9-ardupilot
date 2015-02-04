@@ -385,7 +385,7 @@ then
 fi
 
 # optional oreo leds
-if oreoled start
+if oreoled -b 2 start
 then
     echo "oreoled started OK"
 fi
