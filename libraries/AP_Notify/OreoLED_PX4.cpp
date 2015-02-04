@@ -34,34 +34,21 @@
 
 extern const AP_HAL::HAL& hal;
 
-#define OREOLED_PARAM_BIAS_RED          0x00    // set redness
-#define OREOLED_PARAM_BIAS_GREEN        0x01    // set greenness
-#define OREOLED_PARAM_BIAS_BLUE         0x02    // set blueness
-#define OREOLED_PARAM_AMPLITUDE_RED     0x03    // set max red during sire, strobe or fade-in
-#define OREOLED_PARAM_AMPLITUDE_GREEN   0x04    // set max green during sire, strobe or fade-in
-#define OREOLED_PARAM_AMPLITUDE_BLUE    0x05    // set max blue during sire, strobe or fade-in
-#define OREOLED_PARAM_PERIOD            0x06
-#define OREOLED_PARAM_REPEAT            0x07
-#define OREOLED_PARAM_PHASEOFFSET       0x08
-#define OREOLED_PARAM_MACRO             0x09
-
-#define OREOLED_PARAM_MACRO_RESET       0x00
-#define OREOLED_PARAM_MACRO_FWUPDATE    0x01
-#define OREOLED_PARAM_MACRO_AUTOPILOT   0x02
-#define OREOLED_PARAM_MACRO_CALIBRATE   0x03
-#define OREOLED_PARAM_MACRO_POWERON     0x04
-#define OREOLED_PARAM_MACRO_POWEROFF    0x05
-#define OREOLED_PARAM_MACRO_RED         0x06
-#define OREOLED_PARAM_MACRO_GREEN       0x07
-#define OREOLED_PARAM_MACRO_BLUE        0x08
-#define OREOLED_PARAM_MACRO_AMBER       0x09
-#define OREOLED_PARAM_MACRO_WHITE       0x0A
+#define OREOLED_BACKLEFT                0       // back left led instance number
+#define OREOLED_BACKRIGHT               1       // back right led instance number
+#define OREOLED_FRONTRIGHT              2       // front right led instance number
+#define OREOLED_FRONTLEFT               3       // front left led instance number
 
 // constructor
 OreoLED_PX4::OreoLED_PX4() : NotifyDevice(),
     _overall_health(false),
-    _oreoled_fd(-1)
+    _oreoled_fd(-1),
+    _send_required(false),
+    _state_desired_semaphore(false)
 {
+    // initialise desired and sent state
+    memset(_state_desired,0,sizeof(_state_desired));
+    memset(_state_sent,0,sizeof(_state_sent));
 }
 
 // init - initialised the device
@@ -75,6 +62,8 @@ bool OreoLED_PX4::init()
     } else {
         // set overall health
         _overall_health = true;
+        // register timer
+        hal.scheduler->register_io_process(AP_HAL_MEMBERPROC(&OreoLED_PX4::update_timer));
     }
 
     // return health
@@ -85,43 +74,260 @@ bool OreoLED_PX4::init()
 // called at 50Hz
 void OreoLED_PX4::update()
 {
-    static uint8_t counter = 0;
+    static uint8_t counter = 0;     // counter to reduce rate from 50hz to 10hz
+    static uint8_t step = 0;        // step to control pattern
+    uint8_t brightness = OREOLED_BRIGHT;
 
     // return immediately if not healthy
     if (!_overall_health) {
         return;
     }
 
-    // increment counter
+    // slow rate from 50Hz to 10hz
     counter++;
-    if (counter >= 100) {
-        counter = 0;
+    if (counter < 5) {
+        return;
+    }
+    counter = 0;
+
+    // use dim light when connected through USB
+    if (hal.gpio->usb_connected()) {
+        brightness = OREOLED_DIM;
     }
 
-    // flash LED red
-    if (counter == 0) {
-        set_rgb(0xff, 0x0, 0x0);
+    // move forward one step
+    step++;
+    if (step >= 10) {
+        step = 0;
     }
 
-    // flash LED green
-    if (counter == 50) {
-        set_rgb(0x0, 0xff, 0x0);
+    // initialising pattern
+    if (AP_Notify::flags.initialising) {
+        if (step & 1) {
+            // left side on
+            set_rgb(OREOLED_FRONTLEFT, brightness, brightness, brightness); // white
+            set_rgb(OREOLED_BACKLEFT, brightness, 0, 0);    // red
+            // right side off
+            set_rgb(OREOLED_FRONTRIGHT, 0, 0, 0);
+            set_rgb(OREOLED_BACKRIGHT, 0, 0, 0);
+        } else {
+            // left side off
+            set_rgb(OREOLED_FRONTLEFT, 0, 0, 0);
+            set_rgb(OREOLED_BACKLEFT, 0, 0, 0);
+            // right side on
+            set_rgb(OREOLED_FRONTRIGHT, brightness, brightness, brightness); // white
+            set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);    // red
+        }
+
+        // exit so no other status modify this pattern
+        return;
+    }
+
+    // save trim and esc calibration pattern
+    if (AP_Notify::flags.save_trim || AP_Notify::flags.esc_calibration) {
+        switch(step) {
+            case 0:
+            case 3:
+            case 6:
+                // red
+                set_rgb(OREOLED_INSTANCE_ALL, brightness, 0, 0);
+                break;
+
+            case 1:
+            case 4:
+            case 7:
+                // blue
+                set_rgb(OREOLED_INSTANCE_ALL, 0, 0, brightness);
+                break;
+
+            case 2:
+            case 5:
+            case 8:
+                // green on
+                set_rgb(OREOLED_INSTANCE_ALL, 0, brightness, 0);
+                break;
+
+            case 9:
+                // all off
+                set_rgb(OREOLED_INSTANCE_ALL, 0, 0, 0);
+                break;
+        }
+        // exit so no other status modify this pattern
+        return;
+    }
+
+    // radio and battery failsafe patter: flash yellow
+    // gps failsafe pattern : flashing yellow and blue
+    // baro glitching pattern : flashing yellow and purple
+    // ekf_bad pattern : flashing yellow and red
+    if (AP_Notify::flags.failsafe_radio || AP_Notify::flags.failsafe_battery ||
+            AP_Notify::flags.failsafe_gps || AP_Notify::flags.gps_glitching ||
+            AP_Notify::flags.baro_glitching ||
+            AP_Notify::flags.ekf_bad) {
+        switch(step) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                // yellow on
+                set_rgb(OREOLED_INSTANCE_ALL, brightness, brightness, 0);
+                break;
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+                if (AP_Notify::flags.failsafe_gps || AP_Notify::flags.gps_glitching) {
+                    // blue on for gps failsafe
+                    set_rgb(OREOLED_INSTANCE_ALL, 0, 0, brightness);
+                } else if (AP_Notify::flags.baro_glitching) {
+                    // purple on if baro glitching
+                    set_rgb(OREOLED_INSTANCE_ALL, brightness, 0, brightness);
+                } else if (AP_Notify::flags.ekf_bad) {
+                    // red on if ekf bad
+                    set_rgb(OREOLED_INSTANCE_ALL, brightness, 0, 0);
+                }else{
+                    // all off for radio or battery failsafe
+                    set_rgb(OREOLED_INSTANCE_ALL, 0, 0, 0);
+                }
+                break;
+        }
+        // exit so no other status modify this pattern
+        return;
+    }
+
+    // check armed status
+    if (AP_Notify::flags.armed) {
+        // default armed pattern is solid white front, solid red back
+        set_rgb(OREOLED_FRONTLEFT, brightness, brightness, brightness); // white
+        set_rgb(OREOLED_FRONTRIGHT, brightness, brightness, brightness); // white
+        set_rgb(OREOLED_BACKLEFT, brightness, 0, 0);    // red
+        set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);   // red
+        return;
+    } else {
+        if (step <= 4) {
+            // all on
+            set_rgb(OREOLED_FRONTLEFT, brightness, brightness, brightness); // white
+            set_rgb(OREOLED_FRONTRIGHT, brightness, brightness, brightness); // white
+            set_rgb(OREOLED_BACKLEFT, brightness, 0, 0);    // red
+            set_rgb(OREOLED_BACKRIGHT, brightness, 0, 0);   // red
+        } else {
+            // all off
+            set_rgb(OREOLED_INSTANCE_ALL, 0, 0, 0);   // red
+        }
     }
 }
 
-// set_rgb - set color as a combination of red, green and blue values
-void OreoLED_PX4::set_rgb(uint8_t red, uint8_t green, uint8_t blue)
+// set_rgb - set color as a combination of red, green and blue values for one or all LEDs
+void OreoLED_PX4::set_rgb(uint8_t instance, uint8_t red, uint8_t green, uint8_t blue)
 {
     // return immediately if no healty leds
     if (!_overall_health) {
         return;
     }
 
-    // send pattern to all LEDs
-    for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
-        oreoled_rgbset_t rgb_set = {OREOLED_ALL_INSTANCES, OREOLED_PATTERN_SOLID, red, green, blue};   // red
-        ioctl(_oreoled_fd, OREOLED_SET_RGB, (unsigned long)&rgb_set);
+    // get semaphore
+    _state_desired_semaphore = true;
+
+    // check for all instances
+    if (instance == OREOLED_INSTANCE_ALL) {
+        // store desired rgb for all LEDs
+        for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
+            if (_state_desired[i].mode != OREOLED_MODE_RGB || _state_desired[i].red != red || _state_desired[i].green != green || _state_desired[i].blue != blue) {
+                _state_desired[i].mode = OREOLED_MODE_RGB;
+                _state_desired[i].red = red;
+                _state_desired[i].green = green;
+                _state_desired[i].blue = blue;
+                _send_required = true;
+            }
+        }
+    } else if (instance < OREOLED_NUM_LEDS) {
+        // store desired rgb for one LED
+        if (_state_desired[instance].mode != OREOLED_MODE_RGB || _state_desired[instance].red != red || _state_desired[instance].green != green || _state_desired[instance].blue != blue) {
+            _state_desired[instance].mode = OREOLED_MODE_RGB;
+            _state_desired[instance].red = red;
+            _state_desired[instance].green = green;
+            _state_desired[instance].blue = blue;
+            _send_required = true;
+        }
     }
+
+    // release semaphore
+    _state_desired_semaphore = false;
+}
+
+// set_macro - set macro for one or all LEDs
+void OreoLED_PX4::set_macro(uint8_t instance, oreoled_macro macro)
+{
+    // return immediately if no healthy leds
+    if (!_overall_health) {
+        return;
+    }
+
+    // set semaphore
+    _state_desired_semaphore = true;
+
+    // check for all instances
+    if (instance == OREOLED_INSTANCE_ALL) {
+        // store desired macro for all LEDs
+        for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
+            if (_state_desired[i].mode != OREOLED_MODE_MACRO || _state_desired[i].macro != macro) {
+                _state_desired[i].mode = OREOLED_MODE_MACRO;
+                _state_desired[i].macro = macro;
+                _send_required = true;
+            }
+        }
+    } else if (instance < OREOLED_NUM_LEDS) {
+        // store desired macro for one LED
+        if (_state_desired[instance].mode != OREOLED_MODE_MACRO || _state_desired[instance].macro != macro) {
+            _state_desired[instance].mode = OREOLED_MODE_MACRO;
+            _state_desired[instance].macro = macro;
+            _send_required = true;
+        }
+    }
+
+    // release semaphore
+    _state_desired_semaphore = false;
+}
+
+// update_timer - called by scheduler and updates PX4 driver with commands
+void OreoLED_PX4::update_timer(void)
+{
+    // exit immediately if send not required, unhealty or state is being updated
+    if (!_overall_health || !_send_required || _state_desired_semaphore) {
+        return;
+    }
+
+    // for each LED
+    for (uint8_t i=0; i<OREOLED_NUM_LEDS; i++) {
+
+        // check for state change
+        if (!(_state_desired[i] == _state_sent[i])) {
+            switch (_state_desired[i].mode) {
+                case OREOLED_MODE_PATTERN:
+                    // not yet supported
+                    break;
+                case OREOLED_MODE_MACRO:
+                    {
+                    oreoled_macrorun_t macro_run = {i, _state_desired[i].macro};
+                    ioctl(_oreoled_fd, OREOLED_RUN_MACRO, (unsigned long)&macro_run);
+                    }
+                    break;
+                case OREOLED_MODE_RGB:
+                    {
+                    oreoled_rgbset_t rgb_set = {i, OREOLED_PATTERN_SOLID, _state_desired[i].red, _state_desired[i].green, _state_desired[i].blue};
+                    ioctl(_oreoled_fd, OREOLED_SET_RGB, (unsigned long)&rgb_set);
+                    }
+                    break;
+            }
+            // save state change
+            _state_sent[i] = _state_desired[i];
+        }
+    }
+
+    // flag updates sent
+    _send_required = false;
 }
 
 #endif // CONFIG_HAL_BOARD == HAL_BOARD_PX4

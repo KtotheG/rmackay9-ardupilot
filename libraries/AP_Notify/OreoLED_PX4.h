@@ -19,8 +19,12 @@
 
 #include <AP_HAL.h>
 #include "NotifyDevice.h"
+#include <drivers/drv_oreoled.h>
 
-#define OREOLED_NUM_LEDS    4   // maximum number of individual LEDs connected to the oreo led cpu
+#define OREOLED_NUM_LEDS        4       // maximum number of individual LEDs connected to the oreo led cpu
+#define OREOLED_INSTANCE_ALL    0xff    // instance number to indicate all LEDs (used for set_rgb and set_macro)
+#define OREOLED_BRIGHT          0xff    // maximum brightness when flying (disconnected from usb)
+#define OREOLED_DIM             0x0f    // dim when connected to USB
 
 class OreoLED_PX4 : public NotifyDevice
 {
@@ -38,15 +42,55 @@ public:
     // healthy - return true if at least one LED is responding
     bool healthy() const { return _overall_health; }
 
-    // set_rgb - set color as a combination of red, green and blue values for all LEDs
-    void set_rgb(uint8_t red, uint8_t green, uint8_t blue);
-
 private:
-    // overall health
-    uint8_t _overall_health : 1;
+    // update_timer - called by scheduler and updates PX4 driver with commands
+    void update_timer(void);
 
-    // file descriptor
-    int     _oreoled_fd;
+    // set_rgb - set color as a combination of red, green and blue values for one or all LEDs
+    void set_rgb(uint8_t instance, uint8_t red, uint8_t green, uint8_t blue);
+
+    // set_macrxo - set macro for one or all LEDs
+    void set_macro(uint8_t instance, enum oreoled_macro macro);
+
+    // oreo led modes (pattern, macro or rgb)
+    enum oreoled_mode {
+        OREOLED_MODE_PATTERN,
+        OREOLED_MODE_MACRO,
+        OREOLED_MODE_RGB
+    };
+
+    // oreo_state structure holds possible state of an led
+    struct oreo_state {
+        enum oreoled_mode mode;
+        enum oreoled_pattern pattern;
+        enum oreoled_macro macro;
+        uint8_t red;
+        uint8_t green;
+        uint8_t blue;
+
+        // operator=
+        inline oreo_state operator=(oreo_state source) {
+            mode = source.mode;
+            pattern = source.pattern;
+            red = source.red;
+            blue = source.blue;
+            green = source.green;
+            return source;
+        }
+
+        // operator==
+        inline bool operator==(oreo_state os) {
+           return ((os.mode==mode) && (os.pattern==pattern) && (os.macro==macro) && (os.red==red) && (os.green==green) && (os.blue==blue));
+        }
+    };
+
+    // private members
+    uint8_t _overall_health : 1;                    // overall health
+    int     _oreoled_fd;                            // file descriptor
+    bool    _send_required;                         // true when we need to send an update to at least one led
+    bool    _state_desired_semaphore;               // true when we are updating the state desired values to ensure they are not sent prematurely
+    oreo_state _state_desired[OREOLED_NUM_LEDS];    // desired state
+    oreo_state _state_sent[OREOLED_NUM_LEDS];       // last state sent to led
 };
 
 #endif // __OREOLED_PX4_H__
