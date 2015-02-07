@@ -412,7 +412,7 @@ static void autotune_attitude_control()
             // Testing rate P and D gains so will set body-frame rate targets.
             // Rate controller will use existing body-frame rates and convert to motor outputs
             // for all axes except the one we override here.
-            //attitude_control.angle_ef_roll_pitch_rate_ef_yaw( 0.0f, 0.0f, 0.0f);
+            attitude_control.angle_ef_roll_pitch_rate_ef_yaw( 0.0f, 0.0f, 0.0f);
             switch (autotune_state.axis) {
                 case AUTOTUNE_AXIS_ROLL:
                     // override body-frame roll rate
