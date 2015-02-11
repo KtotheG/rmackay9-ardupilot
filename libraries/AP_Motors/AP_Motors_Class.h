@@ -134,7 +134,7 @@ public:
     virtual void        throttle_pass_through(int16_t pwm);
 
     // set_voltage - set voltage to be used for output scaling
-    virtual void        set_voltage(float volts);
+    virtual void        set_voltage(float volts){ _batt_voltage = volts; };
 
 	// setup_throttle_curve - used to linearlise thrust output by motors
     //      returns true if curve is created successfully

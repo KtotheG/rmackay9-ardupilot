@@ -168,19 +168,6 @@ void AP_Motors::throttle_pass_through(int16_t pwm)
     }
 }
 
-// set_voltage - set voltage to be used for output scaling
-void AP_Motors::set_voltage(float volts)
-{
-    if(_batt_voltage_max > 0 && _batt_voltage_min < _batt_voltage_max) {
-        _batt_voltage = min(_batt_voltage_max, max(_batt_voltage_min, volts));
-        _batt_rem = _batt_voltage/_batt_voltage_max;         // ratio of current battery voltage to maximum battery voltage
-        _lift_max = _batt_rem*(1-_thrust_expo) + _thrust_expo*_batt_rem*_batt_rem;
-    } else {
-        _batt_rem = 1;
-        _lift_max = 1;
-    }
-}
-
 // output - sends commands to the motors
 void AP_Motors::output()
 {
