@@ -84,6 +84,12 @@ public:
     // set_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
     void set_rate_yaw_filt(float rate_yaw_filt);
 
+    // get_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    float get_rate_yaw_filt() const { return _rate_yaw_filt; }
+
+    // get_dt - sets time delta in seconds for all controllers (i.e. 100hz = 0.01, 400hz = 0.0025)
+    void save_rate_yaw_filt() const { _rate_yaw_filt.save(); }
+
     // relax_bf_rate_controller - ensure body-frame rate controller has zero errors to relax rate controller output
     void relax_bf_rate_controller();
 
