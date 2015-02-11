@@ -85,6 +85,47 @@ float AC_PID::get_pid(float error, float dt)
     return get_p(error) + get_i(error, dt) + get_d(error, dt);
 }
 
+
+float AC_PID::get_d_filt(float input, float dt)
+{
+    float derivative;
+    if (isnan(_last_input)) {
+        // we've just done a reset, suppress the first input
+        // term as we don't want a sudden change in input to cause
+        // a large D output change
+        _last_input = 0;
+    }
+    if (isnan(_last_derivative)) {
+        // we've just done a reset, suppress the first derivative
+        // term as we don't want a sudden change in input to cause
+        // a large D output change
+        derivative = 0;
+        _last_derivative = 0;
+    } else {
+        // calculate instantaneous derivative
+        derivative = _d_lpf_alpha * (input - _last_input);
+        _last_input = _last_input + _d_lpf_alpha * (input - _last_input);
+        derivative = derivative/dt;
+    }
+
+    // discrete low pass filter, cuts out the
+    // high frequency noise that can drive the controller crazy
+    _last_derivative = _last_derivative + _d_lpf_alpha * (derivative - _last_derivative);
+
+    // add in derivative component
+    return _kd * _last_derivative;
+}
+
+float AC_PID::get_p_filt()
+{
+    return get_p(_last_input);
+}
+
+float AC_PID::get_i_filt(float dt)
+{
+    return get_i(_last_input, dt);
+}
+
 void AC_PID::reset_I()
 {
     _integrator = 0;
