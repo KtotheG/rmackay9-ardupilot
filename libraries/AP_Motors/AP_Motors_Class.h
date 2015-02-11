@@ -54,6 +54,12 @@
 
 #define AP_MOTORS_SPIN_WHEN_ARMED   70  // spin motors at this PWM value when armed
 
+#define AP_MOTORS_THR_LOW_CMP       0.5f // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
+#define AP_MOTORS_THST_EXPO         0.5f // set to 0 for linear and 1 for second order approximation
+#define AP_MOTORS_THST_MAX          0.95f // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
+#define AP_MOTORS_BAT_MX            0.0f
+#define AP_MOTORS_BAT_MN            0.0f
+
 // bit mask for recording which limits we have reached when outputting to motors
 #define AP_MOTOR_NO_LIMITS_REACHED  0x00
 #define AP_MOTOR_ROLLPITCH_LIMIT    0x01
@@ -127,6 +133,9 @@ public:
     //  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
     virtual void        throttle_pass_through(int16_t pwm);
 
+    // set_voltage - set voltage to be used for output scaling
+    virtual void        set_voltage(float volts);
+
 	// setup_throttle_curve - used to linearlise thrust output by motors
     //      returns true if curve is created successfully
 	bool                setup_throttle_curve();
@@ -179,6 +188,15 @@ protected:
     AP_Int8             _throttle_curve_mid;    // throttle which produces 1/2 the maximum thrust.  expressed as a percentage (i.e. 0 ~ 100 ) of the full throttle range
     AP_Int8             _throttle_curve_max;    // throttle which produces the maximum thrust.  expressed as a percentage (i.e. 0 ~ 100 ) of the full throttle range
     AP_Int16            _spin_when_armed;       // used to control whether the motors always spin when armed.  pwm value above radio_min
+
+    AP_Float            _batt_voltage;          // last battery voltage
+    AP_Float            _batt_rem;          // last battery voltage
+    AP_Float            _lift_max;          // last battery voltage
+    AP_Float            _batt_voltage_max;          // last battery voltage
+    AP_Float            _batt_voltage_min;          // last battery voltage
+    AP_Float            _throttle_low_comp;     // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
+    AP_Float            _thrust_expo;           // set to 0 for linear and 1 for second order approximation
+    AP_Float            _thrust_curve_max;      // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
 
     // internal variables
     RC_Channel&         _rc_roll;               // roll input in from users is held in servo_out

@@ -137,6 +137,8 @@ void AP_MotorsMatrix::output_armed()
     int16_t yaw_allowed;    // amount of yaw we can fit in
     int16_t thr_adj;        // the difference between the pilot's desired throttle and out_best_thr_pwm (the throttle that is actually provided)
 
+    float temp_out;
+
     // initialize limits flag
     limit.roll_pitch = false;
     limit.yaw = false;
@@ -191,8 +193,8 @@ void AP_MotorsMatrix::output_armed()
         // set rpy_low and rpy_high to the lowest and highest values of the motors
         for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
             if (motor_enabled[i]) {
-                rpy_out[i] = _rc_roll.pwm_out * _roll_factor[i] +
-                             _rc_pitch.pwm_out * _pitch_factor[i];
+                rpy_out[i] = _rc_roll.pwm_out * _roll_factor[i]/_lift_max +
+                             _rc_pitch.pwm_out * _pitch_factor[i]/_lift_max;
 
                 // record lowest roll pitch command
                 if (rpy_out[i] < rpy_low) {
@@ -215,7 +217,8 @@ void AP_MotorsMatrix::output_armed()
         //      We will choose #1 (the best throttle for yaw control) if that means reducing throttle to the motors (i.e. we favour reducing throttle *because* it provides better yaw control)
         //      We will choose #2 (a mix of pilot and hover throttle) only when the throttle is quite low.  We favour reducing throttle instead of better yaw control because the pilot has commanded it
         int16_t motor_mid = (rpy_low+rpy_high)/2;
-        out_best_thr_pwm = min(out_mid_pwm - motor_mid, max(_rc_throttle.radio_out, (_rc_throttle.radio_out+_hover_out)/2));
+        //out_best_thr_pwm = min(out_mid_pwm - motor_mid, max(_rc_throttle.radio_out, (_rc_throttle.radio_out+_hover_out)/2));
+        out_best_thr_pwm = min(out_mid_pwm - motor_mid, max(_rc_throttle.radio_out, _rc_throttle.radio_out*max(0,1.0f-_throttle_low_comp)+_hover_out*_throttle_low_comp));
 
         // calculate amount of yaw we can fit into the throttle range
         // this is always equal to or less than the requested yaw from the pilot or rate controller
@@ -224,16 +227,16 @@ void AP_MotorsMatrix::output_armed()
 
         if (_rc_yaw.pwm_out >= 0) {
             // if yawing right
-            if (yaw_allowed > _rc_yaw.pwm_out) {
-                yaw_allowed = _rc_yaw.pwm_out; // to-do: this is bad form for yaw_allows to change meaning to become the amount that we are going to output
+            if (yaw_allowed > _rc_yaw.pwm_out/_lift_max) {
+                yaw_allowed = _rc_yaw.pwm_out/_lift_max; // to-do: this is bad form for yaw_allows to change meaning to become the amount that we are going to output
             }else{
                 limit.yaw = true;
             }
         }else{
             // if yawing left
             yaw_allowed = -yaw_allowed;
-            if( yaw_allowed < _rc_yaw.pwm_out ) {
-                yaw_allowed = _rc_yaw.pwm_out; // to-do: this is bad form for yaw_allows to change meaning to become the amount that we are going to output
+            if( yaw_allowed < _rc_yaw.pwm_out/_lift_max ) {
+                yaw_allowed = _rc_yaw.pwm_out/_lift_max; // to-do: this is bad form for yaw_allows to change meaning to become the amount that we are going to output
             }else{
                 limit.yaw = true;
             }
@@ -314,7 +317,14 @@ void AP_MotorsMatrix::output_armed()
         if (_throttle_curve_enabled) {
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
-                    motor_out[i] = _throttle_curve.get_y(motor_out[i]);
+                    //motor_out[i] = _throttle_curve.get_y(motor_out[i]);
+
+                    temp_out = ((float)(motor_out[i]-out_min_pwm))/((float)(out_max_pwm-out_min_pwm));
+
+                    if (_thrust_expo > 0.0f){
+                        temp_out = ((_thrust_expo-1.0f) + safe_sqrt((1.0f-_thrust_expo)*(1.0f-_thrust_expo) + 4.0f*_thrust_expo*_lift_max*temp_out))/(2.0f*_thrust_expo*_batt_rem);
+                    }
+                    motor_out[i] = temp_out*(_thrust_curve_max*out_max_pwm-out_min_pwm)+out_min_pwm;
                 }
             }
         }
