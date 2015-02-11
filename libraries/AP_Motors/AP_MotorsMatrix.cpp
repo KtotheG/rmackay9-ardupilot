@@ -163,9 +163,10 @@ void AP_MotorsMatrix::output_armed()
     _rc_yaw.calc_pwm();
 
     if(_batt_voltage_max > 0 && _batt_voltage_min < _batt_voltage_max) {
-        _batt_voltage = constrain_float(_batt_voltage, _batt_voltage_min, _batt_voltage_max);
+        float batt_voltage = _batt_voltage + _batt_current * _batt_resistance;
+        batt_voltage = constrain_float(batt_voltage, _batt_voltage_min, _batt_voltage_max);
         // filter at 0.5 Hz
-        _batt_rem = _batt_rem  + 0.007792f*(_batt_voltage/_batt_voltage_max-_batt_rem);         // ratio of current battery voltage to maximum battery voltage
+        _batt_rem = _batt_rem  + 0.007792f*(batt_voltage/_batt_voltage_max-_batt_rem);         // ratio of current battery voltage to maximum battery voltage
         _lift_max = _batt_rem*(1-_thrust_expo) + _thrust_expo*_batt_rem*_batt_rem;
     } else {
         _batt_rem = 1;
@@ -191,12 +192,22 @@ void AP_MotorsMatrix::output_armed()
         // Every thing is limited
         limit.roll_pitch = true;
         limit.yaw = true;
+        _batt_voltage_resting = _batt_voltage;
+        _batt_current_resting = _batt_current;
+        _batt_timer = 0;
 
     } else {
 
         // check if throttle is below limit
         if (_rc_throttle.servo_out <= _min_throttle) {  // perhaps being at min throttle itself is not a problem, only being under is
             limit.throttle_lower = true;
+        }
+
+        // set battery impedance
+        if (_batt_timer < 400 && _rc_throttle.radio_out >= _hover_out && ((_batt_current_resting*2.0f) < _batt_current)) {
+            // filter reaches 90% in 1/4 the test time
+            _batt_resistance += 0.05*(( (_batt_voltage_resting-_batt_voltage)/(_batt_current-_batt_current_resting) ) - _batt_resistance);
+            _batt_timer += 1;
         }
 
         // calculate roll and pitch for each motor
@@ -327,8 +338,6 @@ void AP_MotorsMatrix::output_armed()
         if (_throttle_curve_enabled) {
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
-                    //motor_out[i] = _throttle_curve.get_y(motor_out[i]);
-
                     temp_out = ((float)(motor_out[i]-out_min_pwm))/((float)(out_max_pwm-out_min_pwm));
 
                     if (_thrust_expo > 0.0f){
