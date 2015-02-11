@@ -59,6 +59,7 @@
 #define AP_MOTORS_THST_MAX          0.95f // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
 #define AP_MOTORS_BAT_MX            0.0f
 #define AP_MOTORS_BAT_MN            0.0f
+#define AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM    500
 
 // bit mask for recording which limits we have reached when outputting to motors
 #define AP_MOTOR_NO_LIMITS_REACHED  0x00
@@ -136,6 +137,9 @@ public:
     // set_voltage - set voltage to be used for output scaling
     virtual void        set_voltage(float volts){ _batt_voltage = volts; };
 
+    // set_voltage - set yaw minimum mix
+    virtual void        set_yaw_min(float yaw_min) { _matrix_yaw_min = yaw_min; };
+
 	// setup_throttle_curve - used to linearlise thrust output by motors
     //      returns true if curve is created successfully
 	bool                setup_throttle_curve();
@@ -197,6 +201,7 @@ protected:
     AP_Float            _throttle_low_comp;     // mix between throttle and hover throttle for 0 to 1 and ratio above hover throttle for >1
     AP_Float            _thrust_expo;           // set to 0 for linear and 1 for second order approximation
     AP_Float            _thrust_curve_max;      // throttle which produces the maximum thrust.  (i.e. 0 ~ 1 ) of the full throttle range
+    AP_Float            _matrix_yaw_min;        // yaw control is given at least this pwm range
 
     // internal variables
     RC_Channel&         _rc_roll;               // roll input in from users is held in servo_out

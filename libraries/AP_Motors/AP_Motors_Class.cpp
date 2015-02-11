@@ -104,6 +104,13 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @User: Standard
     AP_GROUPINFO("THST_BAT_MN", 10, AP_Motors, _batt_voltage_min, AP_MOTORS_BAT_MN),
 
+    // @Param: MAT_YAW_MIN
+    // @DisplayName: Matrix Yaw Min
+    // @Description: Yaw control is given at least this pwm range
+    // @Range: 0 300
+    // @User: Advanced
+    AP_GROUPINFO("MAT_YAW_MIN", 11, AP_Motors, _matrix_yaw_min, AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM),
+
     AP_GROUPEND
 };
 
