@@ -153,6 +153,7 @@ static void read_battery(void)
     // update motors with voltage
     if (battery.monitoring() == AP_BATT_MONITOR_VOLTAGE_ONLY || battery.monitoring() == AP_BATT_MONITOR_VOLTAGE_AND_CURRENT) {
         motors.set_voltage(battery.voltage());
+        motors.set_current(battery.current_amps());
     }
 
     // check for low voltage or current if the low voltage check hasn't already been triggered
