@@ -242,7 +242,6 @@ protected:
     float               _batt_current_resting;  // last battery voltage
     float               _batt_resistance;       // last battery voltage
     int16_t             _batt_timer;            // last battery voltage
-    float               _batt_rem;              // last battery voltage
     float               _lift_max;              // maximum lift ratio from battery voltage
     float               _throttle_limit;        // ratio of throttle limit between hover and maximum
 };
