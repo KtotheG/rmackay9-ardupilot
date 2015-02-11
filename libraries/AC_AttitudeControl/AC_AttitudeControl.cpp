@@ -92,7 +92,7 @@ void AC_AttitudeControl::set_dt(float delta_sec)
     // set attitude controller's D term filters
     _pid_rate_roll.set_d_lpf_alpha(ins_filter, _dt);
     _pid_rate_pitch.set_d_lpf_alpha(ins_filter, _dt);
-    _pid_rate_yaw.set_d_lpf_alpha(ins_filter/2, _dt);
+    _pid_rate_yaw.set_d_lpf_alpha(_rate_yaw_filt, _dt);
 }
 
 void AC_AttitudeControl::set_rate_yaw_filt(float rate_yaw_filt)
