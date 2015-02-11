@@ -949,7 +949,10 @@ static void autotune_save_tuning_gains()
                 // stabilize roll
                 g.p_stabilize_roll.kP(tune_roll_sp);
                 g.p_stabilize_roll.save_gains();
-                attitude_control.save_accel_roll_max(tune_roll_accel);
+
+                if(attitude_control.get_bf_feedforward()){
+                    attitude_control.save_accel_roll_max(tune_roll_accel);
+                }
 
                 // resave pids to originals in case the autotune is run again
                 orig_roll_rp = g.pid_rate_roll.kP();
@@ -969,7 +972,10 @@ static void autotune_save_tuning_gains()
                 // stabilize pitch
                 g.p_stabilize_pitch.kP(tune_pitch_sp);
                 g.p_stabilize_pitch.save_gains();
-                attitude_control.save_accel_pitch_max(tune_pitch_accel);
+
+                if(attitude_control.get_bf_feedforward()){
+                    attitude_control.save_accel_pitch_max(tune_pitch_accel);
+                }
 
                 // resave pids to originals in case the autotune is run again
                 orig_pitch_rp = g.pid_rate_pitch.kP();
@@ -990,6 +996,10 @@ static void autotune_save_tuning_gains()
                 // stabilize yaw
                 g.p_stabilize_yaw.kP(tune_yaw_sp);
                 g.p_stabilize_yaw.save_gains();
+
+                if(attitude_control.get_bf_feedforward()){
+                    attitude_control.save_accel_yaw_max(tune_yaw_accel);
+                }
 
                 // resave pids to originals in case the autotune is run again
                 orig_yaw_rp = g.pid_rate_yaw.kP();
