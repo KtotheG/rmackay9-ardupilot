@@ -110,7 +110,7 @@ float AC_PID::get_d_filt(float input, float dt)
 
     // discrete low pass filter, cuts out the
     // high frequency noise that can drive the controller crazy
-    _last_derivative = _last_derivative + _d_lpf_alpha * (derivative - _last_derivative);
+    _last_derivative = derivative;
 
     // add in derivative component
     return _kd * _last_derivative;
