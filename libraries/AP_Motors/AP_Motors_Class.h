@@ -150,6 +150,18 @@ public:
     // set_voltage - set yaw minimum mix
     virtual void        set_yaw_min(float yaw_min) { _matrix_yaw_min = yaw_min; };
 
+    // get_lift_max - get maximum lift ratio
+    float               get_lift_max() { return _lift_max; }
+
+    // get_batt_voltage_filt - get battery voltage ratio
+    float               get_batt_voltage_filt() { return _batt_voltage_filt; }
+
+    // get_batt_resistance - get battery resistance approximation
+    float               get_batt_resistance() { return _batt_resistance; }
+
+    // get_throttle_limit - throttle limit ratio
+    float               get_throttle_limit() { return _throttle_limit; }
+
 	// setup_throttle_curve - used to linearlise thrust output by motors
     //      returns true if curve is created successfully
 	bool                setup_throttle_curve();
