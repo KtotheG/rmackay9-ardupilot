@@ -72,7 +72,7 @@
 #define AUTOTUNE_TARGET_RATE_RLLPIT_CDS    9000    // target roll/pitch rate during AUTOTUNE_STEP_TWITCHING step
 
 // yaw axis
-#define AUTOTUNE_TARGET_ANGLE_YAW_CD       500     // target angle during TESTING_RATE step that will cause us to move to next step
+#define AUTOTUNE_TARGET_ANGLE_YAW_CD       1000    // target angle during TESTING_RATE step that will cause us to move to next step
 #define AUTOTUNE_TARGET_RATE_YAW_CDS       3000    // target yaw rate during AUTOTUNE_STEP_TWITCHING step
 
 // Auto Tune message ids for ground station
@@ -129,7 +129,7 @@ static float    autotune_test_max;                                          // t
 static uint32_t autotune_step_start_time;                                   // start time of current tuning step (used for timeout checks)
 static uint32_t autotune_step_stop_time;                                    // start time of current tuning step (used for timeout checks)
 static int8_t   autotune_counter;                                           // counter for tuning gains
-static float    autotune_start_yaw;                                         // target base yaw angle during yaw axis tuning
+static float    target_rate, start_rate, target_angle, start_angle;
 
 // backup of currently being tuned parameter values
 static float    orig_roll_rp = 0, orig_roll_ri, orig_roll_rd, orig_roll_sp;
@@ -296,9 +296,6 @@ static void autotune_run()
                 // set gains to their intra-test values (which are very close to the original gains)
                 // autotune_load_intra_test_gains(); //I think we should be keeping the originals here to let the I term settle quickly
                 autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL; // set tuning step back from beginning
-                // recapture target base yaw rate
-                // todo: get desired yaw value
-                autotune_start_yaw = ahrs.yaw_sensor;
             }
         }
 
@@ -321,23 +318,7 @@ static void autotune_attitude_control()
 {
     float rotation_rate = 0.0f;        // rotation rate in radians/second
     int32_t lean_angle = 0;
-    float target_rate, target_angle;
     const float direction_sign = autotune_state.positive_direction ? 1.0 : -1.0;
-
-    switch (autotune_state.axis) {
-    case AUTOTUNE_AXIS_ROLL:
-        target_rate = AUTOTUNE_TARGET_RATE_RLLPIT_CDS;
-        target_angle = AUTOTUNE_TARGET_ANGLE_RLLPIT_CD;
-        break;
-    case AUTOTUNE_AXIS_PITCH:
-        target_rate = AUTOTUNE_TARGET_RATE_RLLPIT_CDS;
-        target_angle = AUTOTUNE_TARGET_ANGLE_RLLPIT_CD;
-        break;
-    case AUTOTUNE_AXIS_YAW:
-        target_rate = AUTOTUNE_TARGET_RATE_YAW_CDS;
-        target_angle = AUTOTUNE_TARGET_ANGLE_YAW_CD;
-        break;
-    }
 
     // check tuning step
     switch (autotune_state.step) {
@@ -348,7 +329,7 @@ static void autotune_attitude_control()
         attitude_control.limit_angle_to_rate_request(true);
 
         // hold level attitude
-        attitude_control.angle_ef_roll_pitch_yaw( 0.0f, 0.0f, autotune_start_yaw, false);
+        attitude_control.angle_ef_roll_pitch_rate_ef_yaw( 0.0f, 0.0f, 0.0f);
 
         // hold the copter level for 0.25 seconds before we begin a twitch
         // reset counter if we are no longer level
@@ -368,6 +349,27 @@ static void autotune_attitude_control()
             // set gains to their to-be-tested values
             autotune_load_twitch_gains();
         }
+
+        switch (autotune_state.axis) {
+        case AUTOTUNE_AXIS_ROLL:
+            target_rate = min(attitude_control.max_rate_step_bf_roll(), AUTOTUNE_TARGET_RATE_RLLPIT_CDS);
+            target_angle = min(attitude_control.max_angle_step_bf_roll(), AUTOTUNE_TARGET_ANGLE_RLLPIT_CD);
+            start_rate = ToDeg(ahrs.get_gyro().x) * 100.0f;
+            start_angle = ahrs.roll_sensor;
+        break;
+        case AUTOTUNE_AXIS_PITCH:
+            target_rate = min(attitude_control.max_rate_step_bf_pitch(), AUTOTUNE_TARGET_RATE_RLLPIT_CDS);
+            target_angle = min(attitude_control.max_angle_step_bf_pitch(), AUTOTUNE_TARGET_ANGLE_RLLPIT_CD);
+            start_rate = ToDeg(ahrs.get_gyro().y) * 100.0f;
+            start_angle = ahrs.pitch_sensor;
+            break;
+        case AUTOTUNE_AXIS_YAW:
+            target_rate = min(attitude_control.max_rate_step_bf_yaw()/1.5f, AUTOTUNE_TARGET_RATE_YAW_CDS);
+            target_angle = min(attitude_control.max_angle_step_bf_yaw(), AUTOTUNE_TARGET_ANGLE_YAW_CD);
+            start_rate = ToDeg(ahrs.get_gyro().z) * 100.0f;
+            start_angle = ahrs.yaw_sensor;
+            break;
+        }
         break;
 
     case AUTOTUNE_STEP_TWITCHING:
@@ -382,15 +384,15 @@ static void autotune_attitude_control()
             switch (autotune_state.axis) {
             case AUTOTUNE_AXIS_ROLL:
                 // request roll to 20deg
-                attitude_control.angle_ef_roll_pitch_yaw( direction_sign * target_angle, 0.0f, autotune_start_yaw, false);
+                attitude_control.angle_ef_roll_pitch_rate_ef_yaw( direction_sign * target_angle + start_angle, 0.0f, 0.0f);
                 break;
             case AUTOTUNE_AXIS_PITCH:
                 // request pitch to 20deg
-                attitude_control.angle_ef_roll_pitch_yaw( 0.0f, direction_sign * target_angle, autotune_start_yaw, false);
+                attitude_control.angle_ef_roll_pitch_rate_ef_yaw( 0.0f, direction_sign * target_angle + start_angle, 0.0f);
                 break;
             case AUTOTUNE_AXIS_YAW:
                 // request pitch to 20deg
-                attitude_control.angle_ef_roll_pitch_yaw( 0.0f, 0.0f, wrap_180_cd_float(autotune_start_yaw + direction_sign * target_angle), false);
+                attitude_control.angle_ef_roll_pitch_yaw( 0.0f, 0.0f, wrap_180_cd_float(direction_sign * target_angle + start_angle), false);
                 break;
             }
         } else {
@@ -400,15 +402,15 @@ static void autotune_attitude_control()
             switch (autotune_state.axis) {
                 case AUTOTUNE_AXIS_ROLL:
                     // override body-frame roll rate
-                    attitude_control.rate_bf_roll_target(direction_sign * target_rate);
+                    attitude_control.rate_bf_roll_target(direction_sign * target_rate + start_rate);
                     break;
                 case AUTOTUNE_AXIS_PITCH:
                     // override body-frame pitch rate
-                    attitude_control.rate_bf_pitch_target(direction_sign * target_rate);
+                    attitude_control.rate_bf_pitch_target(direction_sign * target_rate + start_rate);
                     break;
                 case AUTOTUNE_AXIS_YAW:
                     // override body-frame yaw rate
-                    attitude_control.rate_bf_yaw_target(direction_sign * target_rate);
+                    attitude_control.rate_bf_yaw_target(direction_sign * target_rate + start_rate);
                     break;
             }
         }
@@ -417,16 +419,16 @@ static void autotune_attitude_control()
         // Add filter to measurements
         switch (autotune_state.axis) {
         case AUTOTUNE_AXIS_ROLL:
-            rotation_rate = ToDeg(fabs(ahrs.get_gyro().x)) * 100.0f;
-            lean_angle = labs(ahrs.roll_sensor);
+            rotation_rate = fabs(ToDeg(ahrs.get_gyro().x) * 100.0f - start_rate);
+            lean_angle = labs(ahrs.roll_sensor - (int32_t)start_angle);
             break;
         case AUTOTUNE_AXIS_PITCH:
-            rotation_rate = ToDeg(fabs(ahrs.get_gyro().y)) * 100.0f;
-            lean_angle = labs(ahrs.pitch_sensor);
+            rotation_rate = fabs(ToDeg(ahrs.get_gyro().y) * 100.0f - start_rate);
+            lean_angle = labs(ahrs.pitch_sensor - (int32_t)start_angle);
             break;
         case AUTOTUNE_AXIS_YAW:
-            rotation_rate = ToDeg(fabs(ahrs.get_gyro().z)) * 100.0f;
-            lean_angle = labs(wrap_180_cd(ahrs.yaw_sensor-(int32_t)autotune_start_yaw));
+            rotation_rate = fabs(ToDeg(ahrs.get_gyro().z) * 100.0f - start_rate);
+            lean_angle = labs(wrap_180_cd(ahrs.yaw_sensor-(int32_t)start_angle));
             break;
         }
 
@@ -453,16 +455,30 @@ static void autotune_attitude_control()
         attitude_control.limit_angle_to_rate_request(true);
 
         // log the latest gains
+        if(autotune_state.tune_type == AUTOTUNE_TYPE_SP_DOWN || autotune_state.tune_type == AUTOTUNE_TYPE_SP_UP){
         switch (autotune_state.axis) {
         case AUTOTUNE_AXIS_ROLL:
-            Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_roll_rp, tune_roll_rd, tune_roll_sp);
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_angle, autotune_test_min, autotune_test_max, tune_roll_rp, tune_roll_rd, tune_roll_sp);
             break;
         case AUTOTUNE_AXIS_PITCH:
-            Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_pitch_rp, tune_pitch_rd, tune_pitch_sp);
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_angle, autotune_test_min, autotune_test_max, tune_pitch_rp, tune_pitch_rd, tune_pitch_sp);
             break;
         case AUTOTUNE_AXIS_YAW:
-            Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, autotune_test_min, autotune_test_max, tune_yaw_rp, tune_yaw_rLPF, tune_yaw_sp);
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_angle, autotune_test_min, autotune_test_max, tune_yaw_rp, tune_yaw_rLPF, tune_yaw_sp);
             break;
+        }
+        }else{
+            switch (autotune_state.axis) {
+            case AUTOTUNE_AXIS_ROLL:
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_rate, autotune_test_min, autotune_test_max, tune_roll_rp, tune_roll_rd, tune_roll_sp);
+                break;
+            case AUTOTUNE_AXIS_PITCH:
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_rate, autotune_test_min, autotune_test_max, tune_pitch_rp, tune_pitch_rd, tune_pitch_sp);
+                break;
+            case AUTOTUNE_AXIS_YAW:
+                Log_Write_AutoTune(autotune_state.axis, autotune_state.tune_type, target_rate, autotune_test_min, autotune_test_max, tune_yaw_rp, tune_yaw_rLPF, tune_yaw_sp);
+                break;
+            }
         }
 
         // Check results after mini-step to increase rate D gain
@@ -637,7 +653,9 @@ static void autotune_attitude_control()
         // reverse direction
         autotune_state.positive_direction = !autotune_state.positive_direction;
 
-        autotune_start_yaw = ahrs.yaw_sensor;
+        if(autotune_state.axis == AUTOTUNE_AXIS_YAW){
+            attitude_control.angle_ef_roll_pitch_yaw( 0.0f, 0.0f, ahrs.yaw_sensor, false);
+        }
 
         // reset testing step
         autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL;
@@ -676,7 +694,7 @@ static void autotune_backup_gains_and_initialise()
     autotune_state.step = AUTOTUNE_STEP_WAITING_FOR_LEVEL;
     autotune_step_start_time = millis();
     autotune_state.tune_type = AUTOTUNE_TYPE_RD_UP;
-    autotune_start_yaw = ahrs.yaw_sensor;
+    start_angle = ahrs.yaw_sensor;
 
     // backup original pids and initialise tuned pid values
     if (autotune_roll_enabled()) {
@@ -982,7 +1000,7 @@ void autotune_twitching_test_p(float target, float measurement_max)
 {
     // rate P and D testing completes when the vehicle reaches 20deg
     if (measurement_max < target * 0.9f) {
-        autotune_step_stop_time = autotune_step_start_time + (millis() - autotune_step_start_time) * 2.0f;
+        autotune_step_stop_time = autotune_step_start_time + (millis() - autotune_step_start_time) * 3.0f;
         autotune_step_stop_time = min(autotune_step_stop_time, autotune_step_start_time + AUTOTUNE_TESTING_STEP_TIMEOUT_MS);
     }
 
@@ -1003,7 +1021,7 @@ void autotune_twitching_test_d(float target, float measurement_min, float measur
 {
     // rate P and D testing completes when the vehicle reaches 20deg
     if (measurement_max < target * 0.9f) {
-        autotune_step_stop_time = autotune_step_start_time + (millis() - autotune_step_start_time) * 2.0f;
+        autotune_step_stop_time = autotune_step_start_time + (millis() - autotune_step_start_time) * 3.0f;
         autotune_step_stop_time = min(autotune_step_stop_time, autotune_step_start_time + AUTOTUNE_TESTING_STEP_TIMEOUT_MS);
     }
 
