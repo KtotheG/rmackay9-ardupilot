@@ -74,6 +74,10 @@ public:
     float       get_i(float error, float dt);
     float       get_d(float error, float dt);
 
+    float       get_d_filt(float error, float dt);
+    float       get_p_filt();
+    float       get_i_filt(float dt);
+
     /// Reset the PID integrator
     ///
     void        reset_I();
