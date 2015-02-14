@@ -392,13 +392,13 @@ then
 fi
 
 # optional smbus battery monitor
-if batt_smbus -b 2 start
+if batt_smbus -b 1 start
 then
     echo "Found batt_smbus"
 fi
 
 # optional oreo leds
-if oreoled start
+if oreoled -b 1 start
 then
     echo "oreoled started OK"
 fi
