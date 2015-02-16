@@ -11,7 +11,7 @@
  *                         by a companion computer (i.e. Odroid) communicating via MAVLink
  */
 
-class AC_PrecLand_Companion : AC_PrecLand_Backend
+class AC_PrecLand_Companion : public AC_PrecLand_Backend
 {
 public:
 
@@ -24,7 +24,7 @@ public:
     // get_target_rad - returns 2D body frame angles (in radians) to target
     //  x : body-frame roll direction, positive = target is to right (looking down)
     //  y : body-frame pitch direction, postiive = target is forward (looking down)
-    const Vector2f &get_target_rad();
+    Vector2f get_target_rad();
 
 private:
 
