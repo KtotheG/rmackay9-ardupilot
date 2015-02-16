@@ -1,6 +1,6 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
-#ifndef AC_PRECLAND_COMPANION_H
-#define AC_PRECLAND_COMPANION_H
+#ifndef __AC_PRECLAND_COMPANION_H__
+#define __AC_PRECLAND_COMPANION_H__
 
 #include <AP_Common.h>
 #include <AP_Math.h>
@@ -31,4 +31,4 @@ private:
     mavlink_channel_t   _chan;      // mavlink channel used to communicate with companion computer
 
 };
-#endif	// AC_PRECLAND_COMPANION_H
+#endif	// __AC_PRECLAND_COMPANION_H__
