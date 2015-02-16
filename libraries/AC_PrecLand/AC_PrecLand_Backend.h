@@ -15,15 +15,18 @@ public:
     // Constructor
     AC_PrecLand_Backend(const AC_PrecLand& frontend, AC_PrecLand::precland_state& state);
 
+    // destructor
+    virtual ~AC_PrecLand_Backend() {}
+
     // init - perform any required initialisation of backend controller
     virtual void init() = 0;
 
     // get_target_rad - returns 2D body frame angles (in radians) to target
     //  x : body-frame roll direction, positive = target is to right (looking down)
     //  y : body-frame pitch direction, postiive = target is forward (looking down)
-    virtual const Vector2f &get_target_rad() = 0;
+    virtual Vector2f get_target_rad() = 0;
 
-private:
+protected:
 
     const AC_PrecLand&  _frontend;          // reference to precision landing front end
     AC_PrecLand::precland_state &_state;    // reference to this instances state
