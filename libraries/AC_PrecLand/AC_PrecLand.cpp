@@ -2,6 +2,8 @@
 #include <AP_HAL.h>
 #include <AC_PrecLand.h>
 #include <AC_PrecLand_Backend.h>
+#include <AC_PrecLand_Companion.h>
+#include <AC_PrecLand_IRLock.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -63,18 +65,18 @@ void AC_PrecLand::init()
     _backend_state.healthy = false;
 
     // instantiate backend based on type parameter
-    switch ((enum PrecLandType)_type) {
+    switch ((enum PrecLandType)(_type.get())) {
         // no type defined
         case PRECLAND_TYPE_NONE:
         default:
             return;
         // companion computer
         case PRECLAND_TYPE_COMPANION:
-            _backend = new AC_PrecLand_Companion(*this, backend_state);
+            _backend = new AC_PrecLand_Companion(*this, _backend_state);
             break;
         // IR Lock
         case PRECLAND_TYPE_IRLOCK:
-            _backend = new AC_PrecLand_IRLock(*this, backend_state);
+            _backend = new AC_PrecLand_IRLock(*this, _backend_state);
             break;
     }
 
@@ -85,7 +87,7 @@ void AC_PrecLand::init()
 }
 
 // get_target_shift - returns 3D vector of earth-frame position adjustments to target
-const Vector3f &get_target_shift(Vector3f orig_target)
+Vector3f AC_PrecLand::get_target_shift(const Vector3f &orig_target)
 {
     // exit immediately if not enabled
 

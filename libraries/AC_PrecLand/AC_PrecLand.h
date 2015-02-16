@@ -48,7 +48,7 @@ public:
     bool healthy() { return _backend_state.healthy; }
 
     // get_target_shift - returns 3D vector of earth-frame position adjustments to target
-    const Vector3f &get_target_shift(Vector3f orig_target);
+    Vector3f get_target_shift(const Vector3f& orig_target);
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
@@ -56,7 +56,7 @@ public:
 private:
 
     // get_behaviour - returns enabled parameter as an behaviour
-    enum PrecLandBehaviour get_behaviour() const { return (enum PrecLandBehaviour)_enabled; }
+    enum PrecLandBehaviour get_behaviour() const { return (enum PrecLandBehaviour)(_enabled.get()); }
 
     // references to inertial nav and ahrs libraries
     const AP_AHRS&              _ahrs;
@@ -77,7 +77,7 @@ private:
 
     // backend state
     struct precland_state {
-        bool    heathy;
+        bool    healthy;
     } _backend_state;
     AC_PrecLand_Backend         *_backend;  // pointers to backend precision landing driver
 };
