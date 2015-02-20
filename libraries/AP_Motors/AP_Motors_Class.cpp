@@ -73,14 +73,14 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @DisplayName: bla
     // @Description: bla
     // @Values: 0.5:Default,1:Hover
-    // @User: Standard
+    // @User: Advanced
     AP_GROUPINFO("THR_LOW_CMP", 6, AP_Motors, _throttle_low_comp, AP_MOTORS_THR_LOW_CMP),
 
     // @Param: THST_EXPO
     // @DisplayName: bla
     // @Description: bla
     // @Values: 0:Linear,1:Second Order
-    // @User: Standard
+    // @User: Advanced
     AP_GROUPINFO("THST_EXPO", 7, AP_Motors, _thrust_expo, AP_MOTORS_THST_EXPO),
 
     // @Param: THST_MAX
@@ -90,32 +90,36 @@ const AP_Param::GroupInfo AP_Motors::var_info[] PROGMEM = {
     // @User: Standard
     AP_GROUPINFO("THST_MAX", 8, AP_Motors, _thrust_curve_max, AP_MOTORS_THST_MAX),
 
-    // @Param: THST_MAX
-    // @DisplayName: bla
-    // @Description: Point at which the thrust saturates
-    // @Values: 0.9: Low, 1.0: High
-    // @User: Standard
+    // @Param: THST_BAT_MX
+    // @DisplayName: Battery maximum voltage used for voltage compensation
+    // @Description: Battery maximum voltage used for voltage compensation
+    // @Range: 6.6 27
+    // @Units: Volts
+    // @User: Advanced
     AP_GROUPINFO("THST_BAT_MX", 9, AP_Motors, _batt_voltage_max, AP_MOTORS_BAT_MX),
 
-    // @Param: THST_MAX
-    // @DisplayName: bla
-    // @Description: Point at which the thrust saturates
-    // @Values: 0.9: Low, 1.0: High
-    // @User: Standard
+    // @Param: THST_BAT_MN
+    // @DisplayName: Battery minimum voltage used for voltage compensation
+    // @Description: Battery minimum voltage used for voltage compensation
+    // @Range: 6.6 27
+    // @Units: Volts
+    // @User: Advanced
     AP_GROUPINFO("THST_BAT_MN", 10, AP_Motors, _batt_voltage_min, AP_MOTORS_BAT_MN),
 
     // @Param: MAT_YAW_MIN
     // @DisplayName: Matrix Yaw Min
     // @Description: Yaw control is given at least this pwm range
     // @Range: 0 300
+    // @Units: pwm
     // @User: Advanced
     AP_GROUPINFO("MAT_YAW_MIN", 11, AP_Motors, _matrix_yaw_min, AP_MOTORS_MATRIX_YAW_LOWER_LIMIT_PWM),
 
-    // @Param: THST_MAX
-    // @DisplayName: bla
-    // @Description: Point at which the thrust saturates
-    // @Values: 0.9: Low, 1.0: High
-    // @User: Standard
+    // @Param: THST_CUR_MX
+    // @DisplayName: Battery maximum current used for volage compensation
+    // @Description: Battery maximum current used for volage compensation
+    // @Range: 0.9: Low, 1.0: High
+    // @Units: Amps
+    // @User: Advanced
     AP_GROUPINFO("THST_CUR_MX", 12, AP_Motors, _batt_current_max, AP_MOTORS_CUR_MX),
 
     AP_GROUPEND
@@ -134,12 +138,12 @@ AP_Motors::AP_Motors( RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_
     _spin_when_armed_ramped(0),
     _batt_voltage(0.0f),
     _batt_voltage_resting(0.0f),
-    _batt_voltage_filt(0.0f),
+    _batt_voltage_filt(1.0f),
     _batt_current(0.0f),
     _batt_current_resting(0.0f),
     _batt_resistance(0.0f),
     _batt_timer(0),
-    _lift_max(0.0f),
+    _lift_max(1.0f),
     _throttle_limit(0.0f)
 {
     AP_Param::setup_object_defaults(this, var_info);

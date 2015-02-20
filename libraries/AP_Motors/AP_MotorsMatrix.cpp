@@ -137,8 +137,6 @@ void AP_MotorsMatrix::output_armed()
     int16_t yaw_allowed;    // amount of yaw we can fit in
     int16_t thr_adj;        // the difference between the pilot's desired throttle and out_best_thr_pwm (the throttle that is actually provided)
 
-    float temp_out;
-
     // initialize limits flag
     limit.roll_pitch = false;
     limit.yaw = false;
@@ -170,8 +168,8 @@ void AP_MotorsMatrix::output_armed()
         _batt_voltage_filt = _batt_voltage_filt  + 0.007792f*(batt_voltage/_batt_voltage_max-_batt_voltage_filt);         // ratio of current battery voltage to maximum battery voltage
         _lift_max = _batt_voltage_filt*(1-_thrust_expo) + _thrust_expo*_batt_voltage_filt*_batt_voltage_filt;
     } else {
-        _batt_voltage_filt = 1;
-        _lift_max = 1;
+        _batt_voltage_filt = 1.0f;
+        _lift_max = 1.0f;
     }
 
     // if we are not sending a throttle output, we cut the motors
@@ -259,7 +257,6 @@ void AP_MotorsMatrix::output_armed()
         //      We will choose #1 (the best throttle for yaw control) if that means reducing throttle to the motors (i.e. we favour reducing throttle *because* it provides better yaw control)
         //      We will choose #2 (a mix of pilot and hover throttle) only when the throttle is quite low.  We favour reducing throttle instead of better yaw control because the pilot has commanded it
         int16_t motor_mid = (rpy_low+rpy_high)/2;
-        //out_best_thr_pwm = min(out_mid_pwm - motor_mid, max(_rc_throttle.radio_out, (_rc_throttle.radio_out+_hover_out)/2));
         out_best_thr_pwm = min(out_mid_pwm - motor_mid, max(throttle_radio_out, throttle_radio_out*max(0,1.0f-_throttle_low_comp)+_hover_out*_throttle_low_comp));
 
         // calculate amount of yaw we can fit into the throttle range
@@ -359,7 +356,7 @@ void AP_MotorsMatrix::output_armed()
         if (_throttle_curve_enabled) {
             for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
                 if (motor_enabled[i]) {
-                    temp_out = ((float)(motor_out[i]-out_min_pwm))/((float)(out_max_pwm-out_min_pwm));
+                    float temp_out = ((float)(motor_out[i]-out_min_pwm))/((float)(out_max_pwm-out_min_pwm));
                     if (_thrust_expo > 0.0f){
                         temp_out = ((_thrust_expo-1.0f) + safe_sqrt((1.0f-_thrust_expo)*(1.0f-_thrust_expo) + 4.0f*_thrust_expo*_lift_max*temp_out))/(2.0f*_thrust_expo*_batt_voltage_filt);
                     }
