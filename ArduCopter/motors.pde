@@ -143,6 +143,7 @@ static bool init_arm_motors(bool arming_from_gcs)
     // Reset home position if it has already been set before (but not locked)
     if (ap.home_state == HOME_SET_NOT_LOCKED) {
         set_home_to_current_location();
+        set_home_alt_to_EKF_origin();
     }
     calc_distance_and_bearing();
 

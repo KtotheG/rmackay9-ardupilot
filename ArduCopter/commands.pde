@@ -33,7 +33,7 @@ static void update_home_from_GPS()
     }
 
     // move home to current gps location (this will set home_state to HOME_SET)
-    set_home(gps.location());
+    set_home_to_current_location();
 }
 
 // set_home_to_current_location - set home to current GPS location
@@ -152,4 +152,18 @@ static void check_gps_base_pos()
         }
         ap.gps_base_pos_set = true;
     }
+}
+
+// set_home_alt_to_EKF_origin - forces home altitude to EKF origin
+static void set_home_alt_to_EKF_origin()
+{
+    // exit immediately if ekf does not have absolute vertical position
+    if (!inertial_nav.get_filter_status().flags.vert_pos) {
+        return;
+    }
+
+    // set home alt to origin
+    Location temp_loc = ahrs.get_home();
+    temp_loc.alt = inertial_nav.get_origin().alt;
+    ahrs.set_home(temp_loc);
 }
