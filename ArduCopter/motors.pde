@@ -159,9 +159,6 @@ static bool init_arm_motors(bool arming_from_gcs)
         did_ground_start = true;
     }
 
-    // fast baro calibration to reset ground pressure
-    init_barometer(false);
-
     // reset inertial nav alt to zero
     inertial_nav.set_altitude(0.0f);
 
