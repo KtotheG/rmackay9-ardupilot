@@ -98,6 +98,12 @@ public:
     virtual const Vector3f&    get_position() const { return _position; }
 
     /**
+     * get_llh - updates the provided location with the latest calculated location including absolute altitude
+     *  returns true on success (i.e. the EKF knows it's latest position), false on failure
+     */
+    virtual bool get_location(struct Location &loc) const;
+
+    /**
      * get_latitude - returns the latitude of the current position estimation in 100 nano degrees (i.e. degree value multiplied by 10,000,000)
      * @return
      */

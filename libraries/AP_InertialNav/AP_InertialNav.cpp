@@ -273,6 +273,16 @@ void AP_InertialNav::correct_with_gps(uint32_t now, int32_t lon, int32_t lat)
     _flags.gps_glitching = _glitch_detector.glitching();
 }
 
+/**
+ * get_location - updates the provided location with the latest calculated locatoin
+ *  returns true on success (i.e. the EKF knows it's latest position), false on failure
+ */
+bool AP_InertialNav::get_location(struct Location &loc) const
+{
+    // always fail to return location because we want to rely on EKF
+    return false;
+}
+
 // get accel based latitude
 int32_t AP_InertialNav::get_latitude() const
 {
