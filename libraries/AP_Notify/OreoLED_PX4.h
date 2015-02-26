@@ -81,6 +81,7 @@ private:
     volatile bool _state_desired_semaphore;         // true when we are updating the state desired values to ensure they are not sent prematurely
     oreo_state _state_desired[OREOLED_NUM_LEDS];    // desired state
     oreo_state _state_sent[OREOLED_NUM_LEDS];       // last state sent to led
+    uint8_t _pattern_override;                      // holds last processed pattern override, 0 if we are not overriding a pattern
 };
 
 #endif // __OREOLED_PX4_H__

@@ -44,7 +44,8 @@ OreoLED_PX4::OreoLED_PX4() : NotifyDevice(),
     _overall_health(false),
     _oreoled_fd(-1),
     _send_required(false),
-    _state_desired_semaphore(false)
+    _state_desired_semaphore(false),
+    _pattern_override(0)
 {
     // initialise desired and sent state
     memset(_state_desired,0,sizeof(_state_desired));
@@ -81,6 +82,17 @@ void OreoLED_PX4::update()
 
     // return immediately if not healthy
     if (!_overall_health) {
+        return;
+    }
+
+    // process pattern override
+    if (AP_Notify::pattern_override != 0) {
+        // process pattern override
+        if (AP_Notify::pattern_override != _pattern_override) {
+            _pattern_override = AP_Notify::pattern_override;
+            set_macro(OREOLED_INSTANCE_ALL, (oreoled_macro)_pattern_override);
+        }
+        // return so we do not process any other events or flags
         return;
     }
 
