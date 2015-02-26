@@ -21,53 +21,21 @@
 
 extern const AP_HAL::HAL& hal;
 
-
-// Define tuning parameters
-const AP_Param::GroupInfo SmallEKF::var_info[] PROGMEM = {
-
-    // @Param: VEL_NOISE
-    // @DisplayName: velocity aiding measurement noise (m/s)
-    // @Description: Increasing it causes the filter to be slower to align, but also means that errors in the aiding velocity from the main navigation filter will perturb the attitude less.
-    // @User: Advanced
-    AP_GROUPINFO("VEL_NOISE",    0, SmallEKF, _velNoise, 0.5f),
-
-    // @Param: YAW_NOISE
-    // @DisplayName: compass yaw noise (rad)
-    // @Description: Increasing it causes the filter to be slower to align, but also means that compass and compass relative alignmnet errors will perturb the yaw less.
-    // @User: Advanced
-    AP_GROUPINFO("YAW_NOISE",    1, SmallEKF, _magYawNoise, 0.17f),
-
-    // @Param: GYRO_PNOISE
-    // @DisplayName: Rate gyro noise (rad/s)
-    // @Description: This noise controls the growth of estimated error due to gyro measurement errors excluding bias. Increasing it makes the flter trust the gyro measurements less and other measurements more.
-    // @User: Advanced
-    AP_GROUPINFO("GYRO_PNOISE",    2, SmallEKF, _gyrNoise, 0.0087f),
-
-    // @Param: ACC_PNOISE
-    // @DisplayName: Accelerometer noise (m/s^2)
-    // @Description: This noise controls the growth of estimated error due to accelerometer measurement errors excluding bias. Increasing it makes the flter trust the accelerometer measurements less and other measurements more.
-    // @User: Advanced
-    AP_GROUPINFO("ACC_PNOISE",    3, SmallEKF, _accNoise, 0.5f),
-
-    // @Param: GBIAS_PNOISE
-    // @DisplayName: Rate gyro bias process noise (rad/s^2)
-    // @Description: This noise controls the growth of gyro bias state error estimates. Increasing it makes rate gyro bias estimation faster and noisier.
-    // @User: Advanced
-    AP_GROUPINFO("GBIAS_PNOISE",    4, SmallEKF, _gyroBiasProcessNoise, 5e-4f),
-
-    AP_GROUPEND
-};
-
 // constructor
-SmallEKF::SmallEKF(const AP_AHRS_NavEKF &ahrs) :
+SmallEKF::SmallEKF(const AP_AHRS_NavEKF &ahrs, const float& velNoise, const float& magYawNoise, const float& gyrNoise, const float& accNoise, const float& gyroBiasProcessNoise) :
     _ahrs(ahrs),
+    _velNoise(velNoise),
+    _magYawNoise(magYawNoise),
+    _gyrNoise(gyrNoise),
+    _accNoise(accNoise),
+    _gyroBiasProcessNoise(gyroBiasProcessNoise),
     _main_ekf(ahrs.get_NavEKF_const()),
     state(*reinterpret_cast<struct state_elements *>(&states)),
     FiltInit(false),
     lastMagUpdate(0)
-{
-    AP_Param::setup_object_defaults(this, var_info);
-}
+{}
+
+
 
 // run a 9-state EKF used to calculate orientation
 void SmallEKF::RunEKF(float delta_time, const Vector3f &delta_angles, const Vector3f &delta_velocity, const Vector3f &joint_angles)
