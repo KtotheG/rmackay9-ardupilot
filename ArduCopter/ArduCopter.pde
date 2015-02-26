@@ -158,7 +158,6 @@
 #endif
 #include <AP_LandingGear.h>     // Landing Gear library
 #include <AP_Terrain.h>
-#include <AP_SmallEKF.h>
 
 // AP_HAL to Arduino compatibility layer
 #include "compat.h"

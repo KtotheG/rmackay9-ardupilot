@@ -125,9 +125,8 @@ public:
         k_param_acro_expo,
         k_param_throttle_deadzone,
         k_param_optflow,
-        k_param_dcmcheck_thresh,
-        k_param_log_bitmask, // 60
-        k_param_SmallEKF, // Extended Kalman Filter Inertial Navigation Group - Secondary
+        k_param_dcmcheck_thresh,        // 59
+        k_param_log_bitmask,
 
         // 65: AP_Limits Library
         k_param_limits = 65,            // deprecated - remove
