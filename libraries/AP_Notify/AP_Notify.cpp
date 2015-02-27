@@ -19,7 +19,6 @@
 // static flags, to allow for direct class update from device drivers
 struct AP_Notify::notify_flags_type AP_Notify::flags;
 struct AP_Notify::notify_events_type AP_Notify::events;
-uint8_t AP_Notify::pattern_override;
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     AP_BoardLED boardled;
@@ -86,4 +85,12 @@ void AP_Notify::update(void)
 
     //reset the events
     memset(&AP_Notify::events, 0, sizeof(AP_Notify::events));
+}
+
+// handle a LED_CONTROL message
+void AP_Notify::handle_led_control(mavlink_message_t *msg)
+{
+    for (int i = 0; i < CONFIG_NOTIFY_DEVICES_COUNT; i++) {
+        _devices[i]->handle_led_control(msg);
+    }
 }

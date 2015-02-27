@@ -19,6 +19,7 @@
 #define __AP_NOTIFY_H__
 
 #include <AP_Common.h>
+#include <GCS_MAVLink.h>
 #include <AP_BoardLED.h>
 #include <ToshibaLED.h>
 #include <ToshibaLED_I2C.h>
@@ -94,17 +95,14 @@ public:
     static struct notify_flags_type flags;
     static struct notify_events_type events;
 
-    // pattern_override allows GCS or other external devices to override the LED pattern (only supported by oreoled)
-    static uint8_t pattern_override;
-
     // initialisation
     void init(bool enable_external_leds);
 
     /// update - allow updates of leds that cannot be updated during a timed interrupt
     void update(void);
 
-    /// show_pattern - override regular behaviour and show specified pattern (0 = restore to normal operation, only supported by oreoled)
-    static void show_pattern(uint8_t pattern_id) { AP_Notify::pattern_override = pattern_id; }
+    // handle a LED_CONTROL message
+    static void handle_led_control(mavlink_message_t* msg);
 
 private:
     static NotifyDevice* _devices[CONFIG_NOTIFY_DEVICES_COUNT];
