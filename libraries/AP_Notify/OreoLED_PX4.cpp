@@ -85,14 +85,8 @@ void OreoLED_PX4::update()
         return;
     }
 
-    // process pattern override
-    if (AP_Notify::pattern_override != 0) {
-        // process pattern override
-        if (AP_Notify::pattern_override != _pattern_override) {
-            _pattern_override = AP_Notify::pattern_override;
-            set_macro(OREOLED_INSTANCE_ALL, (oreoled_macro)_pattern_override);
-        }
-        // return so we do not process any other events or flags
+    // return immediately if custom pattern has been sent
+    if (OreoLED_PX4::_pattern_override != 0) {
         return;
     }
 
@@ -309,6 +303,23 @@ void OreoLED_PX4::set_macro(uint8_t instance, oreoled_macro macro)
     _state_desired_semaphore = false;
 }
 
+// send_bytes - send bytes to one or all LEDs
+void OreoLED_PX4::send_bytes(uint8_t instance, uint8_t num_bytes, uint8_t bytes[])
+{
+    // return immediately if no healthy leds
+    if (!_overall_health) {
+        return;
+    }
+
+    // set semaphore
+    _state_desired_semaphore = true;
+
+    // send bytes to some or all leds
+
+    // release semaphore
+    _state_desired_semaphore = false;
+}
+
 // update_timer - called by scheduler and updates PX4 driver with commands
 void OreoLED_PX4::update_timer(void)
 {
@@ -351,6 +362,26 @@ void OreoLED_PX4::update_timer(void)
 
     // flag updates sent
     _send_required = false;
+}
+
+// handle a LED_CONTROL message
+void OreoLED_PX4::handle_led_control(mavlink_message_t *msg)
+{
+    mavlink_led_control_t packet;
+    mavlink_msg_led_control_decode(msg, &packet);
+
+    // exit immediately if instance is invalid
+    if (packet.instance >= OREOLED_NUM_LEDS && packet.instance != OREOLED_INSTANCE_ALL) {
+        return;
+    }
+
+    // if pattern is provided send macro to leds
+    if (packet.pattern != LED_CONTROL_PATTERN_CUSTOM) {
+        set_macro(packet.instance, (oreoled_macro)packet.pattern);
+        _pattern_override = packet.pattern;
+    } else {
+        // custom patterns send bytes
+    }
 }
 
 #endif // CONFIG_HAL_BOARD == HAL_BOARD_PX4
